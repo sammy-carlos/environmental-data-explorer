@@ -1,0 +1,64 @@
+/* Assistant tab: conversation, tool steps, charts and composer */
+
+#assistantTab { overflow: hidden; }
+.chat-log { flex: 1; min-height: 60px; display: flex; flex-direction: column; gap: 10px; margin: -6px -18px 10px; padding: 4px 18px; overflow-y: auto; }
+.chat-empty { margin: auto 0 0; color: var(--muted); font-size: 10px; line-height: 1.6; text-align: center; }
+
+.chat-message { max-width: 94%; font-size: 11px; line-height: 1.55; }
+.chat-message.user { align-self: flex-end; max-width: 85%; border-radius: 12px 12px 3px 12px; padding: 8px 12px; color: #fff; background: var(--forest); white-space: pre-wrap; box-shadow: 0 2px 6px rgba(28,91,79,.18); }
+.chat-message.assistant { align-self: flex-start; width: 100%; border: 1px solid var(--line); border-radius: 3px 12px 12px 12px; padding: 10px 12px; background: #fff; }
+.chat-message.assistant > :last-child { margin-bottom: 0; }
+.chat-message.assistant strong { color: var(--forest-dark); }
+.chat-message.assistant p { margin: 0 0 7px; }
+.chat-message.assistant ul, .chat-message.assistant ol { margin: 0 0 7px; padding-left: 18px; }
+.chat-message.assistant h4 { margin: 8px 0 5px; font-size: 11px; }
+.chat-message.assistant code { border-radius: 3px; padding: 1px 4px; background: #eef2ee; font: 9.5px var(--mono); }
+.chat-message.assistant table { width: 100%; margin: 4px 0 8px; border-collapse: collapse; font-size: 9.5px; }
+.chat-message.assistant th, .chat-message.assistant td { border-bottom: 1px solid var(--line); padding: 4px 5px; text-align: left; }
+.chat-message.assistant th { color: var(--muted); font: 8px/1.2 var(--mono); text-transform: uppercase; }
+.chat-message.error { align-self: stretch; border: 1px solid #efc6c1; border-radius: 6px; padding: 8px 10px; color: var(--danger); background: #fdf0ee; font-size: 10px; }
+
+.code-block { margin: 6px 0 9px; overflow: hidden; border: 1px solid #2c3631; border-radius: 6px; background: #1d2521; }
+.code-head { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2c3631; padding: 4px 6px 4px 10px; color: #9fb0a6; font: 8px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+.copy-button { display: flex; align-items: center; gap: 4px; border: 0; border-radius: 4px; padding: 4px 6px; color: #cfdad3; background: transparent; font: 600 8.5px/1 var(--sans); text-transform: none; letter-spacing: 0; }
+.copy-button:hover { color: #fff; background: #2c3631; }
+.copy-button.done { color: #7fd1b0; }
+.copy-button svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.code-block pre { margin: 0; overflow-x: auto; padding: 9px 10px; color: #e8eee9; font: 9px/1.55 var(--mono); white-space: pre; }
+.chat-log .code-block code { padding: 0; border-radius: 0; color: inherit; background: none; font: inherit; }
+
+.tool-step { align-self: stretch; color: var(--muted); font: 8.5px/1.4 var(--mono); }
+.tool-step summary { display: flex; align-items: center; gap: 6px; cursor: pointer; list-style: none; }
+.tool-step summary::-webkit-details-marker { display: none; }
+.tool-step summary::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #3c997c; }
+.tool-step.running summary::before { background: var(--ochre); animation: pulse 1s infinite; }
+.tool-step.failed summary::before { background: #b4493f; }
+.tool-step .code-block { margin: 6px 0 2px; }
+.tool-step .code-block pre { max-height: 180px; white-space: pre-wrap; }
+
+.chat-chart { align-self: stretch; margin: 0; border: 1px solid var(--line); border-radius: 7px; padding: 10px; background: #fff; }
+.chat-chart strong { display: block; margin-bottom: 6px; font-size: 10px; }
+.chat-chart canvas { width: 100% !important; height: var(--chart-height, 200px) !important; }
+
+.typing { align-self: flex-start; display: flex; gap: 4px; padding: 4px 0; }
+.typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--line-dark); animation: typing 1s infinite; }
+.typing i:nth-child(2) { animation-delay: .15s; }
+.typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes typing { 50% { transform: translateY(-3px); background: var(--forest); } }
+
+.composer { border: 1px solid var(--line-dark); border-radius: 7px; padding: 11px; background: #fff; }
+.composer label { display: block; color: var(--muted); font: 8px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+.composer textarea { width: 100%; resize: none; border: 0; padding: 11px 0 5px; background: transparent; font-size: 11px; line-height: 1.5; outline: 0; }
+.composer textarea::placeholder { color: #9da59f; }
+.composer-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); padding-top: 9px; }
+.composer-footer > button[type="submit"] { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 5px; color: #fff; background: var(--forest); }
+.composer-footer > button[type="submit"]:disabled { opacity: .38; cursor: not-allowed; }
+.composer-footer svg { width: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
+.key-toggle { display: flex; align-items: center; gap: 6px; height: 26px; border: 1px solid var(--line); border-radius: 999px; padding: 0 9px 0 7px; color: var(--muted); background: #fff; font: 8px/1 var(--mono); }
+.key-toggle svg { width: 13px; }
+.key-toggle.missing { border-color: #e7c98f; color: #9a6a00; }
+.new-chat { height: 26px; margin-left: auto; border: 0; padding: 0 8px; color: var(--forest); background: transparent; font: 700 9px/1 var(--sans); }
+.key-panel { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin: 4px 0 8px; }
+.key-panel input { min-width: 0; height: 30px; border: 1px solid var(--line-dark); border-radius: 4px; padding: 0 8px; font: 10px var(--mono); }
+.key-panel button { height: 30px; border: 0; border-radius: 4px; padding: 0 11px; color: #fff; background: var(--forest); font-size: 9px; font-weight: 700; }
+.key-panel #keyClear { grid-column: 1 / -1; justify-self: start; height: auto; padding: 2px 0; color: var(--forest); background: transparent; }

@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "explorer",
+      "runtimeExecutable": "./scripts/serve.sh",
+      "runtimeArgs": [],
+      "port": 8890,
+      "url": "http://127.0.0.1:8890"
+    }
+  ]
+}

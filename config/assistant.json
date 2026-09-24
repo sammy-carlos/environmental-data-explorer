@@ -1,0 +1,8 @@
+{
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "maxTokens": 16000,
+  "maxSteps": 12,
+  "fallbacks": "default",
+  "pricePerMTok": { "input": 5, "cacheWrite": 6.25, "cacheRead": 0.5, "output": 25 }
+}

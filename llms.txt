@@ -1,0 +1,57 @@
+# Environmental Data Explorer
+
+> Map viewer for the Antapacay sediment database (Peru): 57,290 laboratory results
+> for 39 parameters at 1,720 stations, 1970 to 2026. The page is static. It reads a
+> private Parquet release from Hugging Face with DuckDB-Wasm after the user signs in,
+> so nothing can be queried before sign-in.
+
+The page reflects its state in the address bar. These parameters open a view:
+
+- `element`: parameter code (`cu`, `zn`, `as`, `pb`, `cd`, ...) or `all`. Default `cu`.
+- `quality`: `VALID` (default), `all`, `PENDING_REVIEW`, `EXCLUDED_FROM_ANALYSIS`.
+- `years`: range such as `2010-2026`.
+- `view`: `data` (default) or `assistant`.
+- `basemap`: `light`, `topo`, `satellite`.
+- `mode`: `points`, `density`, `clusters`.
+
+Example: `?element=zn&years=2015-2026&mode=density`
+
+## Tools
+
+After sign-in, browsers with WebMCP (`navigator.modelContext`) expose these tools. They
+query the same data as the built-in assistant and change what the page shows.
+
+- `describe_data`: what the data covers, by source and quality status, why results were set aside, and its caveats.
+- `summarize_parameter`, `distribution`: how much of one parameter and how its values spread.
+- `rank_stations`, `stations_near`: where one parameter is highest; what is around a station.
+- `find_hotspots`: stations with the most metals of concern above their dataset P95; `parameter` or `parameters` to choose elements, `draw_area` to outline the most affected area.
+- `distance_profile`: how values change with distance from the main hotspot, the area on the map or a station.
+- `compare_area`, `compare_zones`, `compare_site_types`: the area against the rest; rivers and tailings sites; tailings, mine works, creeks and rivers.
+- `flow_pairs`: upstream against downstream where the field sheets name both sides.
+- `river_pairs`: upstream against downstream along the modelled drainage network, with the distance along the river.
+- `sampling_effort`: how often each source sampled each station, and how many stations have a series over time.
+- `catchment_profile`: what drains to a station (area, people, land cover, stream order) next to its value.
+- `compare_sources`: one source against another, paired by distance when codes differ (e.g. OEFA against company monitoring).
+- `above_threshold`: results and stations above a value the user gives.
+- `annual_trend`, `compare_trends`, `compare_periods`, `compare_campaigns`, `compare_seasons`, `station_trends`: change over time, by season and at the same stations.
+- `compare_elements`, `correlate_elements`, `element_families`: elements side by side and which travel together.
+- `describe_station`, `station_history`: one station, latest sample or over time.
+- `draw_map`: a map of any value per station from a query.
+- `run_sql`: one read-only DuckDB query over the `observations` view; 25 rows as CSV.
+- `set_filters`, `update_map`, `mark_area`: change what the map shows.
+- `read_doc`: verified SQL recipes (`patterns`) or the release history (`changelog`).
+
+## Rules for reading the data
+
+- Use `quality_status = 'VALID'` unless asked otherwise.
+- Compute statistics on `qualifier = 'EQUAL'` only. Never substitute values below the detection limit.
+- Only copper has a unit (mg/kg, inferred). Give every other parameter without a unit.
+- Never add concentrations of different elements. Compare elements through their own percentiles, as `find_hotspots` does.
+- Keep monitoring (`STANDARDIZED`) and historical (`HISTORICAL_GEOCHEMISTRY`) data apart when comparing periods; many historical dates are estimated.
+- Coordinates are preliminary. Station `SW-CC-130` is excluded as a spatial outlier.
+
+## Docs
+
+- [README](README.md): how the site works, local setup and deployment
+- [Dataset configuration](config/datasets.json): tables, parameter names, projection and release tag
+- [Assistant settings](config/assistant.json): model and limits

@@ -1,0 +1,411 @@
+[
+  {
+    "id": "arsenic-median",
+    "question": "¿Cuál es la mediana de arsénico y qué porcentaje de los resultados está bajo el límite de detección?",
+    "expect": {
+      "tools": [
+        "summarize_parameter",
+        "run_sql"
+      ],
+      "numbers": [
+        13.42,
+        43.5
+      ]
+    },
+    "review": "Arsenic has no unit, so the median is given without one."
+  },
+  {
+    "id": "copper-top-station",
+    "question": "¿Qué estación tiene el valor de cobre más alto?",
+    "expect": {
+      "tools": [
+        "rank_stations",
+        "run_sql"
+      ],
+      "text": [
+        "DB-02"
+      ],
+      "numbers": [
+        9270
+      ]
+    },
+    "review": "If a unit is given it is mg/kg, and the answer says it is inferred."
+  },
+  {
+    "id": "follow-up",
+    "question": [
+      "¿Qué estación tiene el valor de cobre más alto?",
+      "¿Y para el zinc?"
+    ],
+    "expect": {
+      "tools": [
+        "rank_stations",
+        "run_sql"
+      ],
+      "text": [
+        "DB-02"
+      ],
+      "numbers": [
+        9654
+      ]
+    },
+    "review": "The second question continues the first one: the station with the highest zinc."
+  },
+  {
+    "id": "most-contaminated",
+    "question": "¿Cuáles son las estaciones más contaminadas?",
+    "expect": {
+      "tools": [
+        "find_hotspots"
+      ],
+      "text": [
+        "PC-07"
+      ],
+      "numbers": [
+        8
+      ],
+      "polygon": false
+    },
+    "review": "Ranks stations by how many metals of concern exceed their own P95 (PC-07 and DB-02 with 8), on a thematic map. Never adds concentrations of different elements."
+  },
+  {
+    "id": "lead-unit",
+    "question": "¿En qué unidades está reportado el plomo?",
+    "expect": {},
+    "review": "Says that no unit is reported for lead. Only copper has one (mg/kg, inferred)."
+  },
+  {
+    "id": "copper-below-limit",
+    "question": "¿Qué porcentaje de los resultados válidos de cobre está bajo el límite de detección?",
+    "expect": {
+      "tools": [
+        "summarize_parameter",
+        "run_sql"
+      ],
+      "numbers": [
+        0.8
+      ]
+    },
+    "review": "20 of 2,468 valid results."
+  },
+  {
+    "id": "zinc-trend",
+    "question": "¿Cómo ha cambiado el zinc en los datos de monitoreo a lo largo de los años?",
+    "expect": {
+      "tools": [
+        "annual_trend"
+      ]
+    },
+    "review": "Line chart of monitoring data from 2008 to 2026: median 31.8 in 2008 and 62.1 in 2026."
+  },
+  {
+    "id": "copper-campaigns",
+    "question": "Compara el cobre entre las campañas de monitoreo.",
+    "expect": {
+      "tools": [
+        "compare_campaigns"
+      ]
+    },
+    "review": "Bar chart of the 30 monitoring campaigns from 2008 to 2026."
+  },
+  {
+    "id": "station-profile",
+    "question": "Describe the latest sample at station DB-02.",
+    "expect": {
+      "tools": [
+        "describe_station"
+      ],
+      "text": [
+        "DB-02",
+        "2026"
+      ]
+    },
+    "review": "Sample of 2026-08-11 with 32 parameters, flagging values above the dataset P95 and P99. Answers in English."
+  },
+  {
+    "id": "hotspot-area",
+    "question": "Draw the area with the most contaminated stations on the map.",
+    "expect": {
+      "tools": [
+        "find_hotspots",
+        "mark_area"
+      ],
+      "area": true
+    },
+    "review": "A polygon around the densest group of hotspot stations, applied as the spatial filter, on a thematic map of how many metals exceed; the bar above the map says what the outline is."
+  },
+  {
+    "id": "cadmium-map",
+    "question": "Muéstrame en el mapa el cadmio desde 2015.",
+    "expect": {
+      "tools": [
+        "set_filters",
+        "update_map"
+      ],
+      "parameter": "cd"
+    },
+    "review": "The map switches to cadmium from 2015: 1,063 valid results, 269 of them measured and drawn."
+  },
+  {
+    "id": "copper-area",
+    "question": "Dibuja el área más afectada por cobre.",
+    "expect": {
+      "tools": [
+        "find_hotspots"
+      ],
+      "area": true,
+      "parameter": "cu"
+    },
+    "review": "One call. Outlines the stations around QY-02, DB-02 and DIQ-OX where copper exceeds its P95 (970), in two or three sentences."
+  },
+  {
+    "id": "compare-elements",
+    "question": "Compara el cobre, el zinc y el arsénico.",
+    "expect": {
+      "tools": [
+        "compare_elements"
+      ]
+    },
+    "review": "Compares each element against its own P95 and P99, never raw concentrations across elements. Arsenic is 43.5% below the detection limit."
+  },
+  {
+    "id": "mine-question",
+    "question": "¿La mina está contaminando los sedimentos?",
+    "expect": {
+      "tools": [
+        "find_hotspots",
+        "annual_trend",
+        "compare_elements",
+        "rank_stations"
+      ]
+    },
+    "review": "Shows where and how often values are high; says P95 and P99 are relative to this dataset, with no legal limits; does not claim a cause without upstream and downstream stations."
+  },
+  {
+    "id": "data-reliability",
+    "question": "¿Qué tan confiables son estos datos?",
+    "expect": {
+      "tools": [
+        "describe_data"
+      ]
+    },
+    "review": "Separates valid, pending review and excluded results with the main reasons, and says the release is still under review."
+  },
+  {
+    "id": "copper-zones",
+    "question": "¿En qué río o sitio el cobre es más alto?",
+    "expect": {
+      "tools": [
+        "compare_zones"
+      ]
+    },
+    "review": "Top zones: the old Atalaya mine adit (median 4,210, only 2 results) and the Ccamacmayo tailings (median 3,549, 86% above P95). Says zones are known for about 13% of the samples."
+  },
+  {
+    "id": "area-vs-rest",
+    "question": [
+      "Dibuja el área más afectada por cobre.",
+      "¿Qué tan distinta es esa área del resto para cobre, zinc y molibdeno?"
+    ],
+    "expect": {
+      "tools": [
+        "compare_area"
+      ],
+      "numbers": [
+        18.2
+      ]
+    },
+    "review": "Inside the copper area the median is about 18 times higher for copper, 21 for molybdenum and 1.8 for zinc."
+  },
+  {
+    "id": "copper-before-after",
+    "question": "¿Subió el cobre en el monitoreo desde 2015?",
+    "expect": {
+      "tools": [
+        "compare_periods",
+        "annual_trend"
+      ]
+    },
+    "review": "Monitoring median 31 before 2015 and 60.9 from 2015; share above P95 from 6.8% to 8.8%. Keeps historical data out."
+  },
+  {
+    "id": "copper-molybdenum",
+    "question": "¿El cobre y el molibdeno aparecen juntos?",
+    "expect": {
+      "tools": [
+        "correlate_elements"
+      ],
+      "numbers": [
+        0.53
+      ]
+    },
+    "review": "Spearman 0.53 over 1,700 samples, a moderate association typical of copper ore; says it can also be natural in a mineralized district."
+  },
+  {
+    "id": "station-history",
+    "question": "¿Cómo ha cambiado el cobre en DB-02?",
+    "expect": {
+      "tools": [
+        "station_history"
+      ],
+      "numbers": [
+        9270
+      ]
+    },
+    "review": "Six values from 2014 (9,270) to 2026 (3,653), all above the dataset P95 of 970."
+  },
+  {
+    "id": "arsenic-distribution",
+    "question": "¿Cómo se distribuyen los valores de arsénico?",
+    "expect": {
+      "tools": [
+        "distribution"
+      ]
+    },
+    "review": "Most measured values between 5 and 30; a few ranges above the dataset P95 and P99. 43.5% of results are below the detection limit."
+  },
+  {
+    "id": "copper-zinc-stations",
+    "question": "Muéstrame en el mapa las estaciones con más problemas de cobre y zinc.",
+    "expect": {
+      "tools": [
+        "find_hotspots"
+      ],
+      "text": [
+        "DB-02"
+      ],
+      "parameter": [
+        "cu",
+        "zn"
+      ],
+      "polygon": false
+    },
+    "review": "One call to find_hotspots with parameters cu and zn. Numbers the stations on the map without a polygon; DB-02, QY-02 and CEM-09/SW-CC-40 lead. One row per station and no guesses about what the codes mean."
+  },
+  {
+    "id": "oefa-hotspots",
+    "question": "¿Qué puntos de monitoreo de sedimentos presentan las concentraciones más altas de metales y dónde se ubican?",
+    "expect": {
+      "tools": [
+        "find_hotspots"
+      ],
+      "text": [
+        "PC-07",
+        "DB-02"
+      ],
+      "polygon": false
+    },
+    "review": "Counts metals of concern only (not Al, K or Na). PC-07 and DB-02 lead with 8; names the watercourse where the field sheet says; separates the copper-molybdenum signature from nickel-chromium-cobalt."
+  },
+  {
+    "id": "oefa-tailings",
+    "question": "¿Los depósitos de relaves están afectando los cuerpos de agua cercanos?",
+    "expect": {
+      "tools": [
+        "compare_site_types",
+        "flow_pairs"
+      ]
+    },
+    "review": "Tailings about 49 times the dataset median for copper and 52 for molybdenum, rivers below 1; the only clear downstream increase is the Salado across Ccamacmayo (24 to 84)."
+  },
+  {
+    "id": "oefa-sources",
+    "question": "¿Qué muestran los monitoreos de la OEFA frente a los de la empresa en las mismas estaciones?",
+    "expect": {
+      "tools": [
+        "compare_sources"
+      ]
+    },
+    "review": "Pairs OEFA and company stations by distance (codes differ); copper and zinc similar, arsenic and lead higher in OEFA (median ratios about 1.6 and 1.3)."
+  },
+  {
+    "id": "oefa-trend",
+    "question": "¿Cómo han evolucionado el arsénico y el plomo en el monitoreo desde 2012? ¿Hay una tendencia al alza?",
+    "expect": {
+      "tools": [
+        "station_trends"
+      ]
+    },
+    "review": "Says yearly medians mix stations; at stations sampled in 4 or more years, 5 of 17 rise for arsenic and 5 of 49 for lead, most without a clear trend."
+  },
+  {
+    "id": "oefa-reliability",
+    "question": "¿Qué tan confiables son estos datos para sustentar una fiscalización?",
+    "expect": {
+      "tools": [
+        "describe_data"
+      ],
+      "numbers": [
+        95.1
+      ]
+    },
+    "review": "Useful to prioritise, not as evidence alone: 95% of results have no unit, 27.6% are below the detection limit, 9,416 are pending review."
+  },
+  {
+    "id": "oefa-guideline",
+    "question": "¿Qué porcentaje de resultados de cobre supera el PEL de 197 mg/kg del CCME?",
+    "expect": {
+      "tools": [
+        "above_threshold"
+      ],
+      "numbers": [
+        17.8
+      ]
+    },
+    "review": "17.8% of copper results and 255 stations, 27.4% in monitoring since 2022; says the copper unit is inferred and that no other element can be compared."
+  },
+  {
+    "id": "oefa-seasons",
+    "question": "¿Hay diferencias entre la época de lluvias y la época seca?",
+    "expect": {
+      "tools": [
+        "compare_seasons"
+      ]
+    },
+    "review": "Same stations in both seasons: copper and molybdenum above P95 more often in the wet season, arsenic in the dry season."
+  },
+  {
+    "id": "river-upstream-downstream-cu",
+    "question": "¿Hay algún tramo de río donde el cobre suba mucho entre una estación y la que está aguas abajo?",
+    "expect": {
+      "tools": [
+        "river_pairs"
+      ],
+      "numbers": [
+        223.94,
+        1.21,
+        4210
+      ]
+    },
+    "review": "LB-AS-02 (18.8) to ATAL-01 (4,210 mg/kg) 1.21 km downstream, 224 times higher. The answer must say the link comes from a 90 m drainage model and that each station has only 2 or 3 results."
+  },
+  {
+    "id": "catchment-of-station",
+    "question": "¿Qué drena hacia la estación ATAL-01?",
+    "expect": {
+      "tools": [
+        "catchment_profile"
+      ],
+      "numbers": [
+        4.58,
+        369,
+        11
+      ]
+    },
+    "review": "4.58 km2 upstream, 369 people, 11 stations upstream, stream order 3, 87% grassland. Modelled at 90 m."
+  },
+  {
+    "id": "why-some-stations-repeat",
+    "question": "¿Por qué algunas estaciones tienen varias mediciones y otras solo una?",
+    "expect": {
+      "tools": [
+        "sampling_effort"
+      ],
+      "numbers": [
+        1170,
+        265
+      ]
+    },
+    "review": "The 1,170 prospecting stations of CMA (1970-2021) have one date each; the monitoring network repeats, 265 stations with two or more dates. Trends can only be measured on those."
+  }
+]

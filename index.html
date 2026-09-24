@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Environmental Data Explorer</title>
+  <meta name="description" content="Map, filter and ask questions about versioned environmental monitoring data.">
+  <link rel="icon" href="./assets/kipu360-mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.0/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mapbox/mapbox-gl-draw@1.5.0/dist/mapbox-gl-draw.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/screens.css">
+  <link rel="stylesheet" href="styles/layout.css">
+  <link rel="stylesheet" href="styles/map.css">
+  <link rel="stylesheet" href="styles/explorer.css">
+  <link rel="stylesheet" href="styles/assistant.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "@duckdb/duckdb-wasm": "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.32.0/+esm",
+        "proj4": "https://cdn.jsdelivr.net/npm/proj4@2.15.0/+esm",
+        "@anthropic-ai/sdk": "https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.127.0/+esm"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="loginScreen" class="login-screen" hidden>
+    <form id="loginForm" class="login-card" autocomplete="on">
+      <img class="login-mark" src="./assets/kipu360.svg" alt="Kipu360" width="150" height="40">
+      <strong>Environmental Data Explorer</strong>
+      <small>Sign in to open the private dataset</small>
+      <label><span>User</span><input id="loginUser" name="username" autocomplete="username" required></label>
+      <label><span>Password</span><input id="loginPassword" name="password" type="password" autocomplete="current-password" required></label>
+      <p id="loginError" class="login-error" role="alert" hidden>Incorrect user or password</p>
+      <button type="submit">Sign in</button>
+      <a class="login-org" href="https://www.cca.org.pe/" target="_blank" rel="noopener"><small>An initiative of</small><img src="./assets/cca.svg" alt="Centro de Competencias del Agua" width="120" height="52"></a>
+    </form>
+  </div>
+
+  <div id="appLoader" class="app-loader" role="status" aria-live="polite" aria-busy="true">
+    <svg class="loader-mark" viewBox="0 0 96 96" aria-hidden="true">
+      <circle class="loader-track" cx="48" cy="48" r="42"/>
+      <g class="loader-orbit"><circle cx="48" cy="6" r="4"/><circle cx="48" cy="90" r="2.5"/></g>
+      <g class="loader-brand"><g transform="translate(-13.4 -20.6) scale(0.361)">
+        <circle cx="170" cy="190" r="72" stroke-width="11"/>
+        <g stroke-width="4.5">
+          <path d="M128 132 L150 154 L178 154"/>
+          <path d="M116 144 L140 168 L166 168 L182 184"/>
+          <path d="M106 158 L128 180 L128 200"/>
+          <path d="M100 176 L116 192 L116 212 L130 226 L138 226"/>
+          <path d="M140 176 L160 196 L160 206"/>
+          <path d="M166 168 L194 168 L208 182 L208 202"/>
+          <circle cx="186" cy="154" r="8"/><circle cx="188" cy="190" r="8"/>
+          <circle cx="128" cy="208" r="8"/><circle cx="146" cy="226" r="8"/>
+          <circle cx="160" cy="214" r="8"/><circle cx="208" cy="210" r="8"/>
+        </g>
+      </g></g>
+    </svg>
+    <strong>Environmental Data Explorer</strong>
+    <span id="loaderLabel">Starting DuckDB</span>
+    <div class="loader-progress"><i id="loaderBar"></i></div>
+    <small id="loaderStep">1 / 5</small>
+    <button id="loaderRetry" type="button" hidden>Retry</button>
+  </div>
+
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Home">
+      <img class="brand-mark" src="./assets/kipu360.svg" alt="Kipu360" width="113" height="30">
+      <span class="brand-copy"><small>Spatial explorer</small></span>
+    </a>
+
+    <div class="dataset-strip" aria-label="Active dataset">
+      <div class="dataset-name">
+        <span class="dataset-icon" aria-hidden="true">◆</span>
+        <span><small>Dataset</small><strong id="datasetTitle">–</strong></span>
+      </div>
+      <div class="dataset-stat map-count-stat"><small>On map</small><strong id="mapCount">–</strong></div>
+      <div class="dataset-stat period-stat"><small>Period</small><strong id="periodValue">–</strong></div>
+    </div>
+
+    <div class="topbar-actions">
+      <button id="signOut" class="sign-out" type="button" title="Sign out" aria-label="Sign out">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10"/></svg>
+      </button>
+      <button id="panelToggle" class="panel-toggle" type="button" aria-label="Toggle the side panel" aria-expanded="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM14 5v14"/></svg>
+        <span>Panel</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="map-shell" aria-label="Map of monitoring stations">
+      <div id="map"></div>
+
+      <div class="map-toolbar" role="group" aria-label="Map mode">
+        <button class="active" type="button" data-mode="points">Points</button>
+        <button type="button" data-mode="density">Density</button>
+        <button type="button" data-mode="clusters">Clusters</button>
+      </div>
+
+      <div class="basemap-switch" role="group" aria-label="Basemap">
+        <button class="active" type="button" data-basemap="light" title="Light basemap"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20V6.5Z"/><path d="M9 4v13.5M15 6.5V20"/></svg><span>Map</span></button>
+        <button type="button" data-basemap="topo" title="Topographic basemap"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19 9.5 8l3.5 6 2.5-3.5L21 19H3Z"/><path d="M7 15.5c2 .8 3.5.8 5.5 0"/></svg><span>Topo</span></button>
+        <button type="button" data-basemap="satellite" title="Satellite imagery"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 3 3M4 10l3-3 3 3-3 3-3-3ZM14 17l3-3 3 3-3 3-3-3ZM14 14l-4-4"/><path d="M15 4a5 5 0 0 1 5 5M15 7a2 2 0 0 1 2 2"/></svg><span>Satellite</span></button>
+      </div>
+
+      <div class="map-cards">
+        <aside id="seriesCard" class="series-overview" aria-label="This station over time" hidden>
+          <header><strong id="seriesTitle"></strong></header>
+          <div class="series-chart"><canvas id="seriesCanvas"></canvas></div>
+        </aside>
+
+        <aside id="catchmentCard" class="catchment-overview" aria-label="Upstream catchment of the open record" hidden>
+          <header><strong>Upstream catchment · <span id="catchmentCode"></span></strong></header>
+          <div id="catchmentMetrics" class="map-overview-metrics"></div>
+          <p id="catchmentNote"></p>
+        </aside>
+
+        <aside class="map-overview" aria-label="Statistics of the selection">
+          <header><strong>Selection statistics</strong></header>
+          <div class="map-overview-metrics">
+            <div><small>Minimum</small><strong id="overviewMinimum">–</strong></div>
+            <div><small>Mean</small><strong id="overviewMean">–</strong></div>
+            <div><small>Median</small><strong id="overviewMedian">–</strong></div>
+            <div><small>P95</small><strong id="overviewP95">–</strong></div>
+            <div><small>P99</small><strong id="overviewP99">–</strong></div>
+            <div><small>Max</small><strong id="overviewMaximum">–</strong></div>
+          </div>
+        </aside>
+
+        <section id="yearCard" class="filter-card year-card" aria-label="Sampling year legend" hidden>
+          <div class="filter-heading"><strong>All elements</strong><small id="yearSamples">–</small></div>
+          <div class="legend">
+            <small class="legend-title">Sampling year</small>
+            <div id="yearRamp" class="legend-ramp"></div>
+            <div class="legend-values"><span><small>First</small><strong id="yearMin">–</strong></span><span></span><span><small>Last</small><strong id="yearMax">–</strong></span></div>
+          </div>
+        </section>
+
+        <section class="filter-card" aria-label="Map legend">
+          <div class="filter-heading">
+            <select id="mapParameter" class="heading-select" aria-label="Element on the map"></select>
+            <select id="colorField" aria-label="Color by">
+              <option value="concentration">Concentration</option>
+              <option value="year">Year</option>
+              <option value="campaign">Campaign</option>
+            </select>
+          </div>
+          <div class="legend">
+            <small id="legendTitle" class="legend-title">–</small>
+            <div id="legendRamp" class="legend-ramp"></div>
+            <div class="legend-values">
+              <span><small id="legendMinLabel">Low</small><strong id="legendMin">–</strong></span>
+              <span><small id="legendMidLabel">Typical</small><strong id="legendMid">–</strong></span>
+              <span><small id="legendMaxLabel">High</small><strong id="legendMax">–</strong></span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div id="agentBar" class="agent-bar" hidden><small id="agentCaption">Assistant view</small><button id="clearAgentMap" type="button">Clear map</button></div>
+      <aside id="thematicLegend" class="thematic-legend" hidden>
+        <strong id="thematicTitle"></strong>
+        <span id="thematicCaption"></span>
+        <div class="thematic-ramp"><i></i><div><b id="thematicMin"></b><b id="thematicMax"></b></div></div>
+      </aside>
+
+      <div class="drop-hint" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 19h14"/></svg>
+        <strong>Drop GeoJSON</strong>
+        <span>Polygons become a spatial filter</span>
+      </div>
+
+      <div class="map-caption"><span>Basemap © Esri</span></div>
+    </section>
+
+    <aside class="analysis-panel">
+      <header class="analysis-header">
+        <nav class="tabs" aria-label="Panel sections">
+          <button class="active" type="button" data-tab="data"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 10h16M4 14.5h16M10 10v9"/></svg><span>Data explorer</span></button>
+          <button type="button" data-tab="assistant"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.5l-1.9-5.7L4.5 10.9 10.1 9 12 3.5Z"/><path d="M18.5 15.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2Z"/></svg><span>Assistant</span></button>
+          <button id="stationTabButton" type="button" data-tab="station" disabled title="Click a point on the map or a row in the table"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg><span>Station</span></button>
+        </nav>
+        <button id="closePanel" type="button" aria-label="Close panel">×</button>
+      </header>
+
+      <div class="panel-content">
+        <section id="dataTab" class="tab-view active">
+          <div class="data-head">
+            <div class="data-count"><strong id="dataResultCount">–</strong><span>results</span><em id="dataUnmapped" title="These results appear in the table but are not drawn on the map" hidden></em></div>
+            <div class="data-mode-switch" role="group" aria-label="Query mode">
+              <button class="active" type="button" data-data-mode="filters"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span>Filters</span></button>
+              <button type="button" data-data-mode="sql"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></svg><span>SQL</span></button>
+            </div>
+            <div class="icon-actions">
+              <button id="clearDataFilters" class="icon-button" type="button" title="Reset" aria-label="Reset filters or SQL"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.5M4 4v4.5h4.5"/></svg></button>
+              <button id="exportData" class="icon-button" type="button" title="Export CSV" aria-label="Export CSV"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg></button>
+            </div>
+          </div>
+
+          <div id="filterMode" class="data-filters">
+            <label class="field" title="Parameter">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3M7.5 15h9"/></svg>
+              <select id="dataParameter" aria-label="Parameter"></select>
+            </label>
+            <label class="field" title="Quality status">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+              <select id="dataQuality" aria-label="Quality status">
+                <option value="VALID">Valid</option>
+                <option value="all">All statuses</option>
+                <option value="PENDING_REVIEW">Pending review</option>
+                <option value="EXCLUDED_FROM_ANALYSIS">Excluded</option>
+              </select>
+            </label>
+            <div class="period-filter" role="group" aria-label="Sampling year range">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg>
+              <output id="periodFromLabel">–</output>
+              <div id="periodSlider" class="range-slider">
+                <div class="range-track"></div>
+                <input id="periodFrom" type="range" aria-label="From year">
+                <input id="periodTo" type="range" aria-label="To year">
+              </div>
+              <output id="periodToLabel">–</output>
+            </div>
+            <div class="spatial-filter">
+              <button id="drawArea" class="draw-toggle" type="button" data-state="idle" aria-pressed="false" title="Draw an area on the map to filter results">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7 12 4l7 5-2 9H7L5 7Z" stroke-dasharray="2.6 2.4"/><circle cx="5" cy="7" r="1.6"/><circle cx="12" cy="4" r="1.6"/><circle cx="19" cy="9" r="1.6"/><circle cx="17" cy="18" r="1.6"/><circle cx="7" cy="18" r="1.6"/></svg>
+                <span>Draw area</span>
+              </button>
+              <button id="repeatFilter" class="draw-toggle secondary" type="button" data-state="idle" aria-pressed="false" title="Keep only the stations sampled on two or more dates. Most stations were sampled once, for geochemical prospecting; the monitoring network is the one that repeats, and only there can a change over time be measured.">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.5 9 11l3.5 3.5L20 6"/><circle cx="9" cy="11" r="1.5"/><circle cx="12.5" cy="14.5" r="1.5"/><circle cx="20" cy="6" r="1.5"/></svg>
+                <span>Sampled 2+ times</span>
+              </button>
+              <button id="loadArea" class="area-icon" type="button" title="Load GeoJSON (or drop it on the map)" aria-label="Load GeoJSON"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 19h14"/></svg></button>
+              <button id="removeArea" class="area-icon danger" type="button" title="Remove all areas" aria-label="Remove all areas" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13M10.5 11v5M13.5 11v5"/></svg></button>
+              <input id="areaFile" type="file" accept=".geojson,.json,application/geo+json,application/json" multiple hidden>
+              <small id="spatialStatus">All locations · drop a GeoJSON on the map</small>
+            </div>
+          </div>
+
+          <section id="sqlMode" class="sql-console" hidden>
+            <textarea id="sqlInput" rows="5" aria-label="SQL query" spellcheck="false"></textarea>
+            <div class="sql-actions"><span id="sqlStatus">Ready</span><button id="runSql" type="button">Apply SQL</button></div>
+          </section>
+
+          <div class="data-table-wrap">
+            <div class="data-table" role="table" aria-label="Analytical results">
+              <div class="data-row head" role="row"><span>Station</span><span>Date</span><span>Parameter</span><span>Value</span><span>Quality</span></div>
+              <div id="dataRows" class="data-rows"><div class="data-loading">Loading results…</div></div>
+            </div>
+          </div>
+          <div class="pagination">
+            <span id="dataRange">–</span>
+            <div><button id="previousPage" type="button" aria-label="Previous page">←</button><span id="pageNumber">1</span><button id="nextPage" type="button" aria-label="Next page">→</button></div>
+          </div>
+
+        </section>
+
+        <section id="stationTab" class="tab-view">
+          <header class="station-head"><div><small>Selected result</small><strong id="detailTitle">–</strong><select id="detailParameter" aria-label="Element of this sample" hidden></select><small id="detailDate"></small></div><button id="closeDetail" type="button" aria-label="Close record">×</button></header>
+          <div id="detailBody"></div>
+        </section>
+
+        <section id="assistantTab" class="tab-view">
+          <div id="chatLog" class="chat-log" aria-live="polite"></div>
+          <form class="composer">
+            <label for="question">Ask a question</label>
+            <textarea id="question" rows="2" disabled></textarea>
+            <div id="keyPanel" class="key-panel" hidden>
+              <input id="keyInput" type="password" placeholder="Paste your Anthropic API key" autocomplete="off" spellcheck="false">
+              <button id="keySave" type="button">Save</button>
+              <button id="keyClear" type="button">Use demo key</button>
+            </div>
+            <div class="composer-footer">
+              <button id="keyToggle" class="key-toggle" type="button" title="Use your own API key"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8M16 7l2 2M14 9l2 2"/></svg><span id="keyStatus">No key</span></button>
+              <button id="newChat" class="new-chat" type="button" hidden>New chat</button>
+              <button type="submit" disabled aria-label="Send question"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14-7-5 14-2.5-5.5L5 12Z"/></svg></button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </aside>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mapbox/mapbox-gl-draw@1.5.0/dist/mapbox-gl-draw.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
