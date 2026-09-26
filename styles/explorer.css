@@ -97,6 +97,7 @@
 .parameter-row.level-p99 strong { color: var(--danger); font-weight: 700; }
 
 .history-rows { max-height: 230px; margin-top: 2px; overflow: auto; }
+.history-row.outside-period { opacity: .4; }
 .history-row { width: 100%; border: 0; border-radius: 0; text-align: left; background: transparent; display: grid; grid-template-columns: 78px minmax(0,1fr) auto; gap: 12px; align-items: baseline; border-top: 1px solid var(--line); padding: 9px 0; font-size: 9px; }
 .history-row.level-p95 { box-shadow: inset 3px 0 #e0a400; padding-left: 9px; background: #fdf6e3; }
 .history-row.level-p95 strong { color: #9a6a00; font-weight: 700; }

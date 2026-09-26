@@ -21,9 +21,35 @@
 .map-cards.all-elements .map-overview, .map-cards.all-elements .filter-card:not(.year-card) { display: none; }
 .map-overview, .filter-card, .catchment-overview, .series-overview { border: 1px solid var(--line-dark); border-radius: 7px; padding: 11px 12px; background: rgba(255,255,255,.96); box-shadow: 0 8px 24px rgba(28,38,32,.1); }
 .series-overview { border-left: 3px solid var(--forest); padding: 9px 10px; }
-.series-overview > header strong { display: block; font-size: 10px; font-weight: 700; letter-spacing: -.01em; }
+.series-overview > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.series-overview > header strong { display: block; min-width: 0; font-size: 10px; font-weight: 700; letter-spacing: -.01em; }
+.series-actions { flex: 0 0 auto; display: flex; gap: 4px; }
+.series-actions button { height: 20px; display: flex; align-items: center; gap: 3px; border: 1px solid var(--line-dark); border-radius: 4px; padding: 0 6px 0 4px; color: var(--ink); background: #fff; font: 500 8px/1 var(--mono); letter-spacing: .04em; }
+.series-actions button:hover { border-color: var(--forest); color: var(--forest); background: var(--mint); }
+.series-actions button:disabled { opacity: .5; cursor: wait; }
+.series-actions svg { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .series-chart { height: 104px; margin-top: 6px; }
 .series-chart canvas { width: 100% !important; height: 104px !important; }
+.series-period { display: flex; align-items: center; gap: 6px; margin-top: 6px; border-top: 1px solid var(--line); padding-top: 7px; }
+.series-period output { flex: 0 0 auto; font: 500 7.5px/1 var(--mono); color: var(--muted); }
+.series-period .range-slider { height: 14px; }
+.series-period .range-track { top: 5px; }
+.series-period .range-slider input { height: 14px; }
+.series-period .range-slider input::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -4px; }
+.series-period .range-slider input::-moz-range-thumb { width: 9px; height: 9px; }
+/* The open date, marked under the thumbs' centres (the thumb is 12px wide). */
+.series-ticks { position: absolute; top: 4px; right: 6px; left: 6px; height: 6px; pointer-events: none; }
+.series-ticks i { position: absolute; top: -2px; left: calc(var(--at) * 100%); width: 3px; height: 10px; margin-left: -1.5px; border-radius: 1px; background: var(--ink); }
+.series-step { display: flex; align-items: center; gap: 4px; margin-top: 5px; }
+.series-step button { height: 20px; display: grid; place-items: center; border: 1px solid var(--line-dark); border-radius: 4px; padding: 0; color: var(--ink); background: #fff; }
+.series-step > button:not(.series-reset) { width: 20px; }
+.series-step button:hover:not(:disabled) { border-color: var(--forest); color: var(--forest); background: var(--mint); }
+.series-step button:disabled { opacity: .35; cursor: default; }
+.series-step svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.series-step strong { min-width: 58px; font: 700 8.5px/1 var(--mono); text-align: center; }
+.series-step small { margin-left: auto; color: var(--muted); font: 7.5px/1 var(--mono); }
+.series-reset { padding: 0 6px !important; font: 500 7.5px/1 var(--mono); }
+.series-reset[hidden] { display: none !important; }
 .catchment-overview { border-left: 3px solid #1D4ED8; padding: 9px 10px; }
 .catchment-overview > header strong { font-size: 10px; }
 .catchment-overview .map-overview-metrics { gap: 7px 7px; margin-top: 7px; }

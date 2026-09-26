@@ -8,7 +8,8 @@ import { exceedanceLevel, parameterLimits } from "../data/statistics.js";
 import { map } from "../map/map.js";
 import { highlightRecord } from "../map/layers.js";
 import { clearCatchment, showCatchment } from "../map/catchment.js";
-import { destroyHistoryChart, renderHistory } from "./history.js";
+import { bindSeriesTimeline, destroyHistoryChart, forgetSeriesPeriod, renderHistory } from "./history.js";
+import { bindSeriesDownloads } from "./series-export.js";
 import { recordedAsZero, valueText } from "../data/selection.js";
 import { setPanel, showTab } from "./layout.js";
 
@@ -139,6 +140,7 @@ export function closeRecord() {
   $("stationTabButton").disabled = true;
   $("detailBody").replaceChildren();
   destroyHistoryChart();
+  forgetSeriesPeriod();
   highlightRecord(null);
   clearCatchment();
   if (state.view === "station") showTab("data");
@@ -150,4 +152,6 @@ export function recordIsOpen() {
 
 export function bindRecord() {
   $("closeDetail").addEventListener("click", closeRecord);
+  bindSeriesDownloads();
+  bindSeriesTimeline((resultId) => openRecordById(resultId, { sampleView: false }));
 }

@@ -111,8 +111,25 @@
 
       <div class="map-cards">
         <aside id="seriesCard" class="series-overview" aria-label="This station over time" hidden>
-          <header><strong id="seriesTitle"></strong></header>
+          <header><strong id="seriesTitle"></strong><span class="series-actions"><button id="seriesPng" type="button" title="Download this chart as an image"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>PNG</button><button id="seriesCsv" type="button" title="Download the values of this chart"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>CSV</button></span></header>
           <div class="series-chart"><canvas id="seriesCanvas"></canvas></div>
+          <div class="series-period" role="group" aria-label="Period of the chart and the downloads">
+            <output id="seriesFromLabel">–</output>
+            <div id="seriesSlider" class="range-slider">
+              <div class="range-track"></div>
+              <div id="seriesTicks" class="series-ticks" aria-hidden="true"></div>
+              <input id="seriesFrom" type="range" aria-label="First date of the chart">
+              <input id="seriesTo" type="range" aria-label="Last date of the chart">
+            </div>
+            <output id="seriesToLabel">–</output>
+          </div>
+          <div class="series-step">
+            <button id="seriesPrevious" type="button" title="Previous sampling date" aria-label="Previous sampling date"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6"/></svg></button>
+            <strong id="seriesCurrentDate">–</strong>
+            <button id="seriesNext" type="button" title="Next sampling date" aria-label="Next sampling date"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg></button>
+            <small id="seriesPeriod"></small>
+            <button id="seriesReset" class="series-reset" type="button" title="Show every date again" hidden>Show all</button>
+          </div>
         </aside>
 
         <aside id="catchmentCard" class="catchment-overview" aria-label="Upstream catchment of the open record" hidden>
