@@ -22,7 +22,9 @@
       "imports": {
         "@duckdb/duckdb-wasm": "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.32.0/+esm",
         "proj4": "https://cdn.jsdelivr.net/npm/proj4@2.15.0/+esm",
-        "@anthropic-ai/sdk": "https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.127.0/+esm"
+        "@anthropic-ai/sdk": "https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.127.0/+esm",
+        "jspdf": "https://cdn.jsdelivr.net/npm/jspdf@3.0.4/+esm",
+        "jspdf-autotable": "https://cdn.jsdelivr.net/npm/jspdf-autotable@5.0.8/+esm"
       }
     }
   </script>
@@ -296,6 +298,7 @@
             <div class="composer-footer">
               <button id="keyToggle" class="key-toggle" type="button" title="Use your own API key"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8M16 7l2 2M14 9l2 2"/></svg><span id="keyStatus">No key</span></button>
               <button id="newChat" class="new-chat" type="button" hidden>New chat</button>
+              <button id="exportChat" class="export-chat" type="button" title="Download the whole conversation as a PDF" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg><b>PDF</b></button>
               <button type="submit" disabled aria-label="Send question"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14-7-5 14-2.5-5.5L5 12Z"/></svg></button>
             </div>
           </form>

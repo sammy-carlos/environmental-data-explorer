@@ -14,6 +14,12 @@ export function formatDate(value) {
   return value == null ? null : new Date(value).toISOString().slice(0, 10);
 }
 
+// The local calendar date, for file names and "downloaded" notes: in the evening in Peru
+// the UTC date is already tomorrow.
+export function localDate(date = new Date()) {
+  return [date.getFullYear(), date.getMonth() + 1, date.getDate()].map((part) => String(part).padStart(2, "0")).join("-");
+}
+
 export function plural(count, singular, pluralForm = `${singular}s`) {
   return `${Number(count).toLocaleString()} ${count === 1 ? singular : pluralForm}`;
 }

@@ -2,9 +2,10 @@ import { state } from "../state.js";
 import { ownApiKey, setOwnApiKey } from "../auth/credentials.js";
 import { escapeHtml } from "../lib/format.js";
 import { codeBlock, markdownToHtml } from "../lib/markdown.js";
-import { clearAssistantDrawings } from "../map/assistant-layer.js";
+import { assistantDrawings, clearAssistantDrawings } from "../map/assistant-layer.js";
 import { Anthropic, modelLabel, streamTurn } from "./claude.js";
 import { renderChart } from "./charts.js";
+import { downloadConversation, downloadTurn, keepTurnMap } from "./report.js";
 import { selectionNote, systemPrompt } from "./prompt.js";
 import { TOOLS, runTool } from "./tools.js";
 
@@ -44,8 +45,12 @@ const STEP_LABELS = {
   read_doc: "Reading documentation…",
 };
 
+const DOWNLOAD_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>';
+
 const history = [];
 let busy = false;
+// How many drawings the map had when the current question was asked.
+let drawingsBefore = 0;
 
 function apiKey() {
   return ownApiKey() || state.session?.anthropicApiKey || "";
@@ -67,6 +72,16 @@ function message(role, content) {
   return append(element);
 }
 
+// Closes an answer with its download button. When the answer drew on the map, the map is
+// kept as it is now, so the PDF shows what this answer showed.
+function closeTurn() {
+  const closing = append(Object.assign(document.createElement("div"), {
+    className: "turn-actions",
+    innerHTML: `<button class="turn-pdf" type="button" title="Download this answer as a PDF">${DOWNLOAD_ICON}<b>PDF</b></button>`,
+  }));
+  keepTurnMap(closing, assistantDrawings() !== drawingsBefore);
+}
+
 function describeError(error) {
   if (error instanceof Anthropic.AuthenticationError) return "The API key was rejected. Add a valid key with the key button below.";
   if (error instanceof Anthropic.RateLimitError) return "The assistant is busy (rate limit). Wait a moment and try again.";
@@ -83,6 +98,8 @@ function describeError(error) {
 async function runStep(block) {
   const step = document.createElement("details");
   step.className = "tool-step running";
+  // The PDF reads the tool back, to say in its appendix what each query was for.
+  step.dataset.tool = block.name;
   step.innerHTML = `<summary>${escapeHtml(STEP_LABELS[block.name] || block.name)}</summary>${typeof block.input?.sql === "string" ? codeBlock(block.input.sql, "sql") : ""}`;
   append(step);
   const result = await runTool(block.name, block.input, { chart: (spec) => renderChart($("chatLog"), spec) });
@@ -118,6 +135,7 @@ async function ask(question) {
   busy = true;
   updateComposer();
   message("user", question);
+  drawingsBefore = assistantDrawings();
   const start = history.length;
   history.push({ role: "user", content: `${question}\n\n${selectionNote()}` });
   const typing = append(Object.assign(document.createElement("div"), { className: "typing", innerHTML: "<i></i><i></i><i></i>" }));
@@ -192,6 +210,7 @@ async function ask(question) {
     // Lets scripts such as evals/run.js follow each answer without reading the page.
     document.dispatchEvent(new CustomEvent("assistant:answered", { detail: { question, answer, steps, usage, cost: costOf(usage), error: failure } }));
     typing.remove();
+    if (answer) closeTurn();
     busy = false;
     updateComposer();
   }
@@ -204,6 +223,7 @@ function updateComposer() {
   question.placeholder = ready ? "For example: which stations have the highest copper?" : "Add an Anthropic API key with the key button below to start";
   document.querySelector(".composer button[type=submit]").disabled = !ready || busy || !question.value.trim();
   $("newChat").hidden = busy || !$("chatLog").querySelector(".chat-message");
+  $("exportChat").hidden = busy || !$("chatLog").querySelector(".turn-actions");
 }
 
 function renderKeyStatus() {
@@ -221,6 +241,7 @@ function renderKeyStatus() {
 // and charts, reads what the tool returned, and writes the answer.
 export function playQuestion(question) {
   message("user", question);
+  drawingsBefore = assistantDrawings();
   return selectionNote();
 }
 
@@ -231,6 +252,7 @@ export async function playStep(name, input) {
 
 export function playAnswer(text) {
   message("assistant", text);
+  closeTurn();
   updateComposer();
 }
 
@@ -256,7 +278,13 @@ export function bindChat() {
     clearAssistantDrawings();
     updateComposer();
   });
+  $("exportChat").addEventListener("click", () => downloadConversation($("exportChat")));
   $("chatLog").addEventListener("click", async (event) => {
+    const pdf = event.target.closest(".turn-pdf");
+    if (pdf) {
+      downloadTurn(pdf);
+      return;
+    }
     const button = event.target.closest(".copy-button");
     if (!button) return;
     const label = button.querySelector("b");

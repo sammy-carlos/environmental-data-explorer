@@ -57,8 +57,20 @@
 .key-toggle { display: flex; align-items: center; gap: 6px; height: 26px; border: 1px solid var(--line); border-radius: 999px; padding: 0 9px 0 7px; color: var(--muted); background: #fff; font: 8px/1 var(--mono); }
 .key-toggle svg { width: 13px; }
 .key-toggle.missing { border-color: #e7c98f; color: #9a6a00; }
-.new-chat { height: 26px; margin-left: auto; border: 0; padding: 0 8px; color: var(--forest); background: transparent; font: 700 9px/1 var(--sans); }
+.new-chat { height: 26px; border: 0; padding: 0 8px; color: var(--forest); background: transparent; font: 700 9px/1 var(--sans); }
 .key-panel { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin: 4px 0 8px; }
 .key-panel input { min-width: 0; height: 30px; border: 1px solid var(--line-dark); border-radius: 4px; padding: 0 8px; font: 10px var(--mono); }
 .key-panel button { height: 30px; border: 0; border-radius: 4px; padding: 0 11px; color: #fff; background: var(--forest); font-size: 9px; font-weight: 700; }
 .key-panel #keyClear { grid-column: 1 / -1; justify-self: start; height: auto; padding: 2px 0; color: var(--forest); background: transparent; }
+
+/* PDF downloads: of the whole conversation beside the send button, of one answer under it. */
+.key-toggle { margin-right: auto; }
+.export-chat, .turn-pdf { display: flex; align-items: center; gap: 4px; border: 1px solid var(--line-dark); border-radius: 5px; color: var(--ink); background: #fff; font: 500 8.5px/1 var(--mono); letter-spacing: .04em; }
+.export-chat { height: 30px; padding: 0 9px 0 7px; }
+.export-chat[hidden] { display: none; }
+.export-chat svg, .turn-pdf svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.export-chat:hover:not(:disabled), .turn-pdf:hover:not(:disabled) { border-color: var(--forest); color: var(--forest); background: var(--mint); }
+.export-chat.working, .turn-pdf.working { opacity: .55; cursor: wait; }
+.export-chat.working svg, .turn-pdf.working svg { animation: pulse 1.15s ease-in-out infinite; }
+.turn-actions { align-self: flex-start; margin-top: -4px; }
+.turn-pdf { height: 22px; padding: 0 7px 0 5px; font-size: 8px; }

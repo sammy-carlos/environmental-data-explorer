@@ -74,7 +74,15 @@ export function setAssistantView(on) {
   else setMapMode(state.map.mode);
 }
 
+// Counts what the assistant draws, so a finished answer knows whether it changed the map.
+let drawings = 0;
+
+export function assistantDrawings() {
+  return drawings;
+}
+
 function show(nextMode, caption) {
+  drawings += 1;
   mode = nextMode;
   state.map.agentShowing = true;
   $("agentCaption").textContent = caption || "Assistant view";

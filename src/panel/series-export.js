@@ -1,5 +1,6 @@
 import { state } from "../state.js";
-import { downloadFile, formatDate, formatNumber, toCsv } from "../lib/format.js";
+import { downloadFile, formatDate, formatNumber, localDate, toCsv } from "../lib/format.js";
+import { loadLogo } from "../lib/logo.js";
 import { LEVELS, SERIES_COLORS, currentSeries, levelOf, seriesChartConfig } from "./history.js";
 
 const $ = (id) => document.getElementById(id);
@@ -30,32 +31,9 @@ function fileStem(series) {
   return `${row.station_code || "station"}_${element}_${period}`.replace(/[^\w.-]+/g, "-");
 }
 
-// The local date: in the evening in Peru the UTC date is already tomorrow.
-function today() {
-  const now = new Date();
-  return [now.getFullYear(), now.getMonth() + 1, now.getDate()].map((part) => String(part).padStart(2, "0")).join("-");
-}
-
 // Percentiles come out of DuckDB with floating point noise (970.3650000000023).
 function rounded(value) {
   return value == null ? null : Math.round(Number(value) * 1e4) / 1e4;
-}
-
-// An SVG with only a viewBox has no size of its own, and some browsers will not draw it on
-// a canvas; the logo is given one before it is loaded.
-async function loadLogo() {
-  const text = await (await fetch("./assets/kipu360.svg")).text();
-  const [, , , width, height] = text.match(/viewBox="([\d.-]+) ([\d.-]+) ([\d.]+) ([\d.]+)"/) || [];
-  const sized = width ? text.replace("<svg ", `<svg width="${width}" height="${height}" `) : text;
-  const url = URL.createObjectURL(new Blob([sized], { type: "image/svg+xml" }));
-  try {
-    const image = new Image();
-    image.src = url;
-    await image.decode();
-    return image;
-  } finally {
-    URL.revokeObjectURL(url);
-  }
 }
 
 // Chart.js draws on a canvas it can measure, so the export chart is laid out off screen.
@@ -161,7 +139,7 @@ async function seriesImage(series) {
     context.fillStyle = MUTED;
     context.font = `12px ${MONO}`;
     const dataset = [state.dataset?.title, state.dataset?.revision].filter(Boolean).join(" ");
-    context.fillText(`Environmental Data Explorer  ·  ${dataset} dataset  ·  downloaded ${today()}`, PAD, HEIGHT - 26);
+    context.fillText(`Environmental Data Explorer  ·  ${dataset} dataset  ·  downloaded ${localDate()}`, PAD, HEIGHT - 26);
     return await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
   } finally {
     chart.done();
