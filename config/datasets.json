@@ -92,7 +92,7 @@
     "geology": {
       "title": "Geology",
       "repository": "WaterCompetenceCenter/peru-geologia",
-      "revision": "main",
+      "revision": "v1.0.0",
       "archive": "peru-geologia.pmtiles",
       "styles": "estilos.json",
       "localPath": "data/geologia",
