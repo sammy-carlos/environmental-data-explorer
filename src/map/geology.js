@@ -11,19 +11,22 @@ const $ = (id) => document.getElementById(id);
 // shown as INGEMMET publishes them, without grouping.
 const LAYERS = [
   { id: "geomorfologia", label: "Geomorphology", visible: false },
-  { id: "litologia_100k", label: "Lithology 1:100k", visible: true },
+  { id: "litologia_100k", label: "Lithology 1:100k", visible: false },
   { id: "litologia_50k", label: "Lithology 1:50k", visible: true },
   { id: "fallas_100k", label: "Faults 1:100k", visible: false },
   { id: "pliegues_100k", label: "Folds 1:100k", visible: false },
-  { id: "fallas_50k", label: "Faults 1:50k", visible: true },
+  { id: "fallas_50k", label: "Faults 1:50k", visible: false },
   { id: "pliegues_50k", label: "Folds 1:50k", visible: false },
 ];
 // Points and drawn areas keep their own clicks; geology answers only where none is hit.
 const INTERACTIVE = ["samples", "cluster-circles", "cluster-points", "exceedance", "thematic-points"];
-const LEGEND_ROWS = 8;
+// The legend card stays small: a few units per layer, the rest behind "show all".
+const LEGEND_ROWS = 4;
+const LEGEND_ALL = 30;
 const layerId = (id) => `geology-${id}`;
 let styles = null;
 let enabled = false;
+let legendAll = false;
 
 const rgba = (color) => (color ? `rgba(${color[0]},${color[1]},${color[2]},${(color[3] ?? 255) / 255})` : null);
 
@@ -74,9 +77,9 @@ function renderControls() {
   $("geologyLayers").replaceChildren(...LAYERS.map((layer) => {
     const row = document.createElement("div");
     row.className = "geology-layer";
+    row.title = `Drawn from zoom ${styles[layer.id].minzoom}`;
     row.innerHTML = `<label><input type="checkbox" ${layer.visible ? "checked" : ""}><span>${escapeHtml(layer.label)}</span></label>`
-      + `<input type="range" min="0" max="1" step="0.05" value="${layer.opacity}" aria-label="Opacity of ${escapeHtml(layer.label)}">`
-      + `<small>from zoom ${styles[layer.id].minzoom}</small>`;
+      + `<input type="range" min="0" max="1" step="0.05" value="${layer.opacity}" aria-label="Opacity of ${escapeHtml(layer.label)}">`;
     const [toggle, slider] = row.querySelectorAll("input");
     toggle.addEventListener("change", () => {
       layer.visible = toggle.checked;
@@ -109,7 +112,8 @@ function renderLegend() {
     }
     if (!counts.size) continue;
     const rows = [...counts.entries()].sort((a, b) => b[1].count - a[1].count);
-    const items = rows.slice(0, LEGEND_ROWS).map(([key, { properties }]) => {
+    const shown = legendAll ? LEGEND_ALL : LEGEND_ROWS;
+    const items = rows.slice(0, shown).map(([key, { properties }]) => {
       const value = values.get(key);
       const color = rgba(value?.color) || rgba(style.default?.color) || "rgba(150,150,150,.7)";
       const label = style.geometry === "polygon"
@@ -118,10 +122,20 @@ function renderLegend() {
       const swatch = style.geometry === "polygon" ? `<i style="background:${color}"></i>` : `<i class="line" style="background:${color}"></i>`;
       return `<li>${swatch}<span>${escapeHtml(label || "Unnamed unit")}</span></li>`;
     });
-    const more = rows.length > LEGEND_ROWS ? `<li class="more">+${rows.length - LEGEND_ROWS} more in view</li>` : "";
+    const more = rows.length > shown ? `<li class="more">+${rows.length - shown} more in view</li>` : "";
     sections.push(`<section><strong>${escapeHtml(layer.label)}</strong><ul>${items.join("")}${more}</ul></section>`);
   }
-  $("geologyLegend").innerHTML = sections.join("") || '<p class="geology-empty">No geology drawn at this zoom. Zoom in to see the 1:50k units.</p>';
+  const anyMore = sections.some((section) => section.includes('class="more"'));
+  const toggle = anyMore || legendAll ? `<button id="geologyLegendAll" class="geology-legend-all" type="button">${legendAll ? "Show fewer" : "Show all"}</button>` : "";
+  // A layer ticked but not drawn yet at this zoom says so, so an empty map is not a mystery.
+  const waiting = LAYERS.filter((layer) => layer.visible && map.getZoom() < styles[layer.id].minzoom)
+    .map((layer) => `<p class="geology-empty">Zoom in to see ${escapeHtml(layer.label)} (from zoom ${styles[layer.id].minzoom}).</p>`);
+  const empty = LAYERS.some((layer) => layer.visible) ? "" : '<p class="geology-empty">Tick a layer to see its units.</p>';
+  $("geologyLegend").innerHTML = sections.join("") + waiting.join("") + (sections.length || waiting.length ? "" : empty) + toggle;
+  $("geologyLegendAll")?.addEventListener("click", () => {
+    legendAll = !legendAll;
+    renderLegend();
+  });
 }
 
 function popupHtml(feature) {
@@ -152,11 +166,48 @@ function bindClicks() {
 export function setGeology(on) {
   enabled = on && Boolean(styles);
   $("geologyToggle").classList.toggle("active", enabled);
-  $("geologyToggle").setAttribute("aria-pressed", String(enabled));
-  $("geologyPanel").hidden = !enabled;
+  $("geologyEnabled").checked = enabled;
   if (!styles) return;
   for (const layer of LAYERS) setVisibility(layer);
   if (enabled) window.setTimeout(renderLegend, 400);
+}
+
+// The layer controls open in a panel on the left, under the map modes, and stay open
+// while they are used; the Geology button or × closes them. The legend card stays while
+// geology shows.
+function setMenu(open) {
+  $("geologyMenu").hidden = !open;
+  $("geologyToggle").setAttribute("aria-expanded", String(open));
+  if (open) fitMenu();
+}
+
+// The panel ends above the cards in the lower left (selection statistics, the series of a
+// station, its catchment), whose height changes; it scrolls inside what is left.
+function fitMenu() {
+  const menu = $("geologyMenu");
+  if (menu.hidden) return;
+  const shell = menu.offsetParent.getBoundingClientRect();
+  const cards = document.querySelector(".map-cards");
+  const box = cards?.getBoundingClientRect();
+  const floor = box && box.height ? box.top : shell.bottom;
+  menu.style.maxHeight = `${Math.max(160, floor - menu.getBoundingClientRect().top - 10)}px`;
+}
+
+function bindMenu() {
+  $("geologyToggle").addEventListener("click", () => {
+    const open = $("geologyMenu").hidden;
+    // Opening the panel shows the geology, with Show geology already ticked.
+    if (open) setGeology(true);
+    setMenu(open);
+  });
+  $("geologyEnabled").addEventListener("change", (event) => setGeology(event.target.checked));
+  $("geologyMenuClose").addEventListener("click", () => setMenu(false));
+  const cards = document.querySelector(".map-cards");
+  if (cards) new ResizeObserver(fitMenu).observe(cards);
+  window.addEventListener("resize", fitMenu);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !$("geologyMenu").hidden) setMenu(false);
+  });
 }
 
 // Adds the overlay under the catchment and the sample points. Without an archive (an
@@ -200,6 +251,5 @@ export async function addGeologyLayers() {
     if (event.sourceId === "geology" && event.tile) schedule();
   });
   $("geologyToggle").hidden = false;
-  $("geologyToggle").addEventListener("click", () => setGeology(!enabled));
-  $("geologyClose").addEventListener("click", () => setGeology(false));
+  bindMenu();
 }
