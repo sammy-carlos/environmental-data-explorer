@@ -4,7 +4,7 @@
     "sediments": {
       "title": "Sediments",
       "repository": "WaterCompetenceCenter/AntapacayDB-Sediments",
-      "revision": "v1.2.0",
+      "revision": "v1.3.0",
       "localPath": "data/sediments",
       "tables": [
         "stations",
