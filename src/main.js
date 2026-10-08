@@ -11,6 +11,7 @@ import { addAssistantLayers, setAssistantView } from "./map/assistant-layer.js";
 import { bindAreas } from "./map/areas.js";
 import { bindPopups } from "./map/popups.js";
 import { addCatchmentLayers } from "./map/catchment.js";
+import { addGeologyLayers } from "./map/geology.js";
 import { bindLayout, hideLoader, loaderFailed, loaderStep, showTab } from "./panel/layout.js";
 import { bindExplorer, refreshData, setupFilters } from "./panel/explorer.js";
 import { bindRecord } from "./panel/record.js";
@@ -52,6 +53,8 @@ async function start() {
     addDataLayers(features);
     addAssistantLayers();
     addCatchmentLayers();
+    // The geology overlay loads on its own; the map is usable without it.
+    addGeologyLayers().catch((error) => console.warn("Geology overlay unavailable:", error));
     applyStyling();
     bindMapToolbar();
     bindAreas();

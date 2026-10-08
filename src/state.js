@@ -1,6 +1,7 @@
 // Single source of truth shared by the panels, the map and the assistant.
 export const state = {
   dataset: null,
+  overlays: {},
   assistant: null,
   session: null,
   db: null,

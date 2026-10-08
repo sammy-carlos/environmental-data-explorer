@@ -51,11 +51,24 @@ export async function openDatabase(onStep) {
 
   onStep("Loading data");
   const local = await usesLocalData();
-  await Promise.all(state.dataset.tables.map(async (name) => {
+  const register = async (name) => {
     const path = `data/${name}.parquet`;
     if (local) await db.registerFileURL(`${name}.parquet`, localUrl(path), duckdb.DuckDBDataProtocol.HTTP, false);
     else await db.registerFileBuffer(`${name}.parquet`, await datasetFile(path, "buffer"));
+  };
+  await Promise.all(state.dataset.tables.map(register));
+  // Tables added by later releases are read when the pinned release has them, so the
+  // explorer keeps working on an older one; state.dataset.available lists what was found.
+  const optional = await Promise.all((state.dataset.optionalTables || []).map(async (name) => {
+    if (local && !(await fetch(localUrl(`data/${name}.parquet`), { method: "HEAD", cache: "no-store" }).then((response) => response.ok, () => false))) return null;
+    try {
+      await register(name);
+      return name;
+    } catch {
+      return null;
+    }
   }));
+  state.dataset.available = [...state.dataset.tables, ...optional.filter(Boolean)];
 
   onStep("Building tables");
   state.db = await db.connect();

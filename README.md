@@ -22,6 +22,13 @@ no token is needed while developing.
 
 Open http://127.0.0.1:8890 and sign in with the shared account.
 
+The Geology button overlays the INGEMMET geology of Peru, a PMTiles archive with its official
+symbology built by the `peru-geologia` project. On localhost it is read from `data/geologia/`
+(`peru-geologia.pmtiles` and `estilos.json`, for example linked from `../peru-geologia/dist`),
+elsewhere from the Hugging Face repository named in `config/datasets.json` under `overlays`.
+When neither has it, the button stays hidden. `serve.sh` answers range requests, which PMTiles
+needs to read a few tiles at a time.
+
 ## Accounts and keys
 
 There is no server to check passwords, so the account works like a locked box.

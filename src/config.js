@@ -7,6 +7,7 @@ export async function loadConfig(datasetId) {
   ]);
   const id = datasets.datasets[datasetId] ? datasetId : datasets.default;
   state.dataset = { id, ...datasets.datasets[id] };
+  state.overlays = datasets.overlays || {};
   state.assistant = assistant;
   state.filters.parameter = state.dataset.defaultParameter;
 }

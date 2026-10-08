@@ -84,7 +84,19 @@
         "invalid_or_missing_date": "Missing or invalid date",
         "repeated_sample_identity": "Repeated sample identity",
         "missing_additional_source_file": "Original source file not supplied"
-      }
+      },
+      "optionalTables": ["station_geology", "station_catchment_geology"]
+    }
+  },
+  "overlays": {
+    "geology": {
+      "title": "Geology",
+      "repository": "WaterCompetenceCenter/peru-geologia",
+      "revision": "main",
+      "archive": "peru-geologia.pmtiles",
+      "styles": "estilos.json",
+      "localPath": "data/geologia",
+      "attribution": "INGEMMET · GEOCATMIN"
     }
   }
 }
