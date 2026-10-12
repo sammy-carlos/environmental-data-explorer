@@ -25,18 +25,47 @@ async function waitForTiles(limit = 4000) {
   }
 }
 
+function datasetUrl(id) {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.searchParams.set("dataset", id);
+  return `${url.pathname}${url.search}`;
+}
+
+function renderDatasetSwitcher() {
+  const switcher = document.getElementById("datasetSwitcher");
+  switcher.replaceChildren(...Object.entries(state.datasets).map(([id, dataset]) => {
+    const link = document.createElement("a");
+    link.href = datasetUrl(id);
+    link.textContent = dataset.title;
+    link.classList.toggle("active", id === state.dataset.id);
+    link.setAttribute("aria-current", id === state.dataset.id ? "page" : "false");
+    return link;
+  }));
+}
+
+function configureDatasetFeatures() {
+  const assistantEnabled = state.dataset.features?.assistant !== false;
+  document.body.dataset.datasetProfile = state.dataset.profile || "sediments";
+  document.getElementById("assistantTabButton").hidden = !assistantEnabled;
+  if (!assistantEnabled && state.view === "assistant") state.view = "data";
+  return assistantEnabled;
+}
+
 async function start() {
   const datasetId = new URLSearchParams(window.location.search).get("dataset");
   await loadConfig(datasetId);
   readUrlState();
   useProjection(state.dataset.projection);
   document.getElementById("datasetTitle").textContent = state.dataset.title;
+  renderDatasetSwitcher();
+  const assistantEnabled = configureDatasetFeatures();
   bindLayout();
   showTab(state.view);
 
   state.session = await signIn();
   bindSignOut();
-  bindChat();
+  if (assistantEnabled) bindChat();
 
   try {
     loaderStep("Starting DuckDB");
@@ -52,7 +81,7 @@ async function start() {
     const [features] = await Promise.all([selectionFeatures(), loadScale(currentParameter()), mapReady]);
     addDataLayers(features);
     addAssistantLayers();
-    addCatchmentLayers();
+    if (state.dataset.features?.catchment !== false) addCatchmentLayers();
     // The geology overlay loads on its own; the map is usable without it.
     addGeologyLayers().catch((error) => console.warn("Geology overlay unavailable:", error));
     applyStyling();
@@ -63,9 +92,9 @@ async function start() {
     loaderStep("Rendering map");
     await waitForTiles();
     state.ready = true;
-    setAssistantView(state.view === "assistant");
+    setAssistantView(assistantEnabled && state.view === "assistant");
     writeUrlState();
-    registerWebMcpTools();
+    if (assistantEnabled) registerWebMcpTools();
     hideLoader();
   } catch (error) {
     console.error(error);

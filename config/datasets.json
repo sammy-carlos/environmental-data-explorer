@@ -85,7 +85,54 @@
         "repeated_sample_identity": "Repeated sample identity",
         "missing_additional_source_file": "Original source file not supplied"
       },
-      "optionalTables": ["station_geology", "station_catchment_geology"]
+      "optionalTables": ["station_geology", "station_catchment_geology"],
+      "features": {
+        "assistant": true,
+        "catchment": true
+      }
+    },
+    "flora": {
+      "title": "Flora",
+      "repository": "WaterCompetenceCenter/AntapacayDB-Flora",
+      "revision": "v1.0.0",
+      "localPath": "data/flora",
+      "profile": "flora",
+      "tables": [
+        "stations",
+        "sampling_events",
+        "samples",
+        "analyses",
+        "results",
+        "parameters",
+        "campaigns",
+        "source_records",
+        "source_files",
+        "quality_issues"
+      ],
+      "projection": "+proj=utm +zone=19 +south +datum=WGS84 +units=m +no_defs",
+      "sourceCrs": "EPSG:32719",
+      "defaultParameter": "cu",
+      "allParametersLabel": "All parameters",
+      "center": [-71.02, -14.74],
+      "documents": {
+        "changelog": "CHANGELOG.md",
+        "guide": "DATASET_GUIDE.md"
+      },
+      "fieldChemistry": [],
+      "contaminants": [],
+      "parameters": {},
+      "qualityReasons": {
+        "censored_limit_unreadable": "Censored value with an unreadable reporting limit",
+        "cma_cation_method_unresolved": "CMA cation method needs review",
+        "coordinate_outside_preliminary_utm_range": "Coordinate outside the preliminary UTM range",
+        "laboratory_evidence_missing": "Laboratory evidence has not been supplied",
+        "plant_part_code_unresolved": "Reported plant-part code needs review",
+        "reported_species_missing": "Reported species is missing"
+      },
+      "features": {
+        "assistant": false,
+        "catchment": false
+      }
     }
   },
   "overlays": {

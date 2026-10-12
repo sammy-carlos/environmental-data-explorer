@@ -85,7 +85,22 @@ export function openRecord(row, { fly = true, sampleView = false } = {}) {
     ]),
     '<div id="stationHistory" class="detail-loading">Loading this station over time…</div>',
     '<div id="sampleParameters" class="detail-loading">Loading sample parameters…</div>',
-    section("Sampling", [["Station", row.station_code], ["Sampling date", formatDate(row.sampling_date)], ["Campaign", row.campaign_name], ["Sample ID", row.sample_id]]),
+    ...(state.dataset.profile === "flora" ? [section("Plant sample", [
+      ["Reported species (raw)", row.reported_species],
+      ["Plant part", row.plant_part],
+      ["Matrix", row.matrix_code],
+      ["Treatment", row.treatment],
+      ["Reported treatment", row.reported_treatment],
+      ["Material description", row.material_description],
+      ["Result basis", row.result_basis],
+      ["Washing status", row.washing_status],
+      ["Laboratory", row.laboratory],
+      ["Analytical method", row.analytical_method],
+    ])] : []),
+    section("Sampling", [
+      [state.dataset.profile === "flora" ? "Reported sample code" : "Station", row.station_code],
+      ["Sampling date", formatDate(row.sampling_date)], ["Campaign", row.campaign_name], ["Sample ID", row.sample_id],
+    ]),
     section("Location", [
       ["Easting", row.easting_m],
       ["Northing", row.northing_m],
@@ -111,7 +126,8 @@ export function openRecord(row, { fly = true, sampleView = false } = {}) {
     }
   }).catch(() => {});
   // The map outlines the station's catchment; clicking another point swaps it.
-  showCatchment(row.station_id);
+  if (state.dataset.features?.catchment !== false) showCatchment(row.station_id);
+  else clearCatchment();
   const located = row.easting_m != null && row.northing_m != null && ["VALID", "PENDING_REVIEW"].includes(row.coordinate_status);
   if (fly && located) map.flyTo({ center: toLngLat(row.easting_m, row.northing_m), zoom: Math.max(map.getZoom(), 12), duration: 700 });
 }

@@ -1,7 +1,7 @@
 /* Top bar, workspace grid and side panel */
 
 .topbar {
-  position: relative; z-index: 1000; height: 68px; display: grid; grid-template-columns: minmax(230px,1fr) auto minmax(230px,1fr);
+  position: relative; z-index: 1000; height: 68px; display: grid; grid-template-columns: minmax(190px,1fr) auto auto minmax(190px,1fr);
   align-items: center; gap: 24px; border-bottom: 1px solid var(--line); padding: 0 18px 0 20px; background: rgba(251,252,249,.97);
 }
 .brand { display: inline-flex; align-items: center; gap: 11px; width: fit-content; color: inherit; text-decoration: none; }
@@ -15,6 +15,10 @@
 .dataset-name small, .dataset-stat small { color: var(--muted); font: 8px/1.25 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
 .dataset-icon { color: var(--forest); font-size: 11px; }
 .dataset-stat { flex: 0 0 auto; display: grid; align-content: center; border-right: 1px solid var(--line); padding: 0 12px; }
+.dataset-switcher { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--line-dark); border-radius: 6px; background: #fff; }
+.dataset-switcher a { padding: 7px 10px; border-radius: 4px; color: var(--muted); font: 10px/1 var(--mono); letter-spacing: .04em; text-decoration: none; text-transform: uppercase; }
+.dataset-switcher a:hover { color: var(--forest); background: #edf5f0; }
+.dataset-switcher a.active { color: #fff; background: var(--forest); }
 .dataset-stat:last-child { border-right: 0; }
 .dataset-stat strong { margin-top: 3px; overflow: hidden; font: 500 11px/1 var(--mono); font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
 .map-count-stat { width: 158px; }
@@ -49,6 +53,7 @@
 @media (max-width: 920px) {
   .topbar { grid-template-columns: 1fr auto; }
   .dataset-strip { display: none; }
+  .dataset-switcher { justify-self: end; }
   .workspace { grid-template-columns: minmax(0,1fr); }
   .analysis-panel { position: absolute; top: 68px; right: 0; bottom: 0; width: min(410px,100%); box-shadow: -12px 0 35px rgba(20,40,30,.13); }
   .workspace.panel-closed .analysis-panel { transform: translateX(100%); }

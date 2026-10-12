@@ -85,6 +85,8 @@
       <div class="dataset-stat period-stat"><small>Period</small><strong id="periodValue">–</strong></div>
     </div>
 
+    <nav id="datasetSwitcher" class="dataset-switcher" aria-label="Dataset"></nav>
+
     <div class="topbar-actions">
       <button id="signOut" class="sign-out" type="button" title="Sign out" aria-label="Sign out">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10"/></svg>
@@ -213,8 +215,8 @@
       <header class="analysis-header">
         <nav class="tabs" aria-label="Panel sections">
           <button class="active" type="button" data-tab="data"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 10h16M4 14.5h16M10 10v9"/></svg><span>Data explorer</span></button>
-          <button type="button" data-tab="assistant"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.5l-1.9-5.7L4.5 10.9 10.1 9 12 3.5Z"/><path d="M18.5 15.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2Z"/></svg><span>Assistant</span></button>
-          <button id="stationTabButton" type="button" data-tab="station" disabled title="Click a point on the map or a row in the table"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg><span>Station</span></button>
+          <button id="assistantTabButton" type="button" data-tab="assistant"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.5l-1.9-5.7L4.5 10.9 10.1 9 12 3.5Z"/><path d="M18.5 15.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2Z"/></svg><span>Assistant</span></button>
+          <button id="stationTabButton" type="button" data-tab="station" disabled title="Click a point on the map or a row in the table"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg><span id="recordTabLabel">Station</span></button>
         </nav>
         <button id="closePanel" type="button" aria-label="Close panel">×</button>
       </header>
@@ -280,7 +282,7 @@
 
           <div class="data-table-wrap">
             <div class="data-table" role="table" aria-label="Analytical results">
-              <div class="data-row head" role="row"><span>Station</span><span>Date</span><span>Parameter</span><span>Value</span><span>Quality</span></div>
+              <div class="data-row head" role="row"><span id="dataStationHeading">Station</span><span>Date</span><span>Parameter</span><span>Value</span><span>Quality</span></div>
               <div id="dataRows" class="data-rows"><div class="data-loading">Loading results…</div></div>
             </div>
           </div>

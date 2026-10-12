@@ -7,13 +7,14 @@ export async function loadConfig(datasetId) {
   ]);
   const id = datasets.datasets[datasetId] ? datasetId : datasets.default;
   state.dataset = { id, ...datasets.datasets[id] };
+  state.datasets = datasets.datasets;
   state.overlays = datasets.overlays || {};
   state.assistant = assistant;
   state.filters.parameter = state.dataset.defaultParameter;
 }
 
 export function parameterLabel(code, name) {
-  if (code === "all") return "All elements";
+  if (code === "all") return state.dataset.allParametersLabel || "All elements";
   return state.dataset.parameters[code] || name || code;
 }
 

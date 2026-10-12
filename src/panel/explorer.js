@@ -17,10 +17,13 @@ const $ = (id) => document.getElementById(id);
 const REQUIRED_COLUMNS = ["result_id", "sample_id", "source_record_id", "station_code", "station_id", "easting_m", "northing_m", "epsg", "coordinate_status", "sampling_date", "campaign_name", "parameter_code", "parameter_name", "reported_value", "numeric_value", "qualifier", "reported_limit", "reported_unit", "quality_status", "source_name", "relative_path", "sheet_name", "source_row_number"];
 
 export async function setupFilters() {
+  const flora = state.dataset.profile === "flora";
+  $("dataStationHeading").textContent = flora ? "Sample" : "Station";
+  $("recordTabLabel").textContent = flora ? "Sample" : "Station";
   const parameters = await query("SELECT parameter_code, parameter_name FROM read_parquet('parameters.parquet')");
   parameters.sort((a, b) => parameterLabel(a.parameter_code, a.parameter_name).localeCompare(parameterLabel(b.parameter_code, b.parameter_name)));
   const options = () => [
-    new Option("All elements", "all"),
+    new Option(parameterLabel("all"), "all"),
     ...parameters.map((item) => new Option(parameterLabel(item.parameter_code, item.parameter_name), item.parameter_code)),
   ];
   $("dataParameter").replaceChildren(...options());
