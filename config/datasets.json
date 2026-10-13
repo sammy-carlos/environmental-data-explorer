@@ -133,6 +133,59 @@
         "assistant": false,
         "catchment": false
       }
+    },
+    "soils": {
+      "title": "Soils",
+      "repository": "WaterCompetenceCenter/AntapacayDB-Soils",
+      "revision": "v1.0.0",
+      "localPath": "data/soils",
+      "profile": "soils",
+      "tables": [
+        "stations",
+        "sampling_events",
+        "samples",
+        "analyses",
+        "results",
+        "parameters",
+        "campaigns",
+        "source_records",
+        "source_files",
+        "quality_issues"
+      ],
+      "projection": "+proj=utm +zone=19 +south +datum=WGS84 +units=m +no_defs",
+      "sourceCrs": "EPSG:32719",
+      "defaultParameter": "cu",
+      "allParametersLabel": "All parameters",
+      "center": [-71.02, -14.74],
+      "documents": {
+        "changelog": "CHANGELOG.md",
+        "guide": "DATASET_GUIDE.md"
+      },
+      "fieldChemistry": [],
+      "contaminants": [],
+      "parameters": {},
+      "qualityReasons": {
+        "datum_not_declared": "The source does not declare a datum",
+        "missing_coordinates": "No coordinates",
+        "edaphic_coordinates_differ_from_metals": "Edaphic and metals workbooks report different locations",
+        "manual_coordinate_fix": "Easting corrected by hand by the provider",
+        "date_differs_between_workbooks": "Edaphic workbook gives another sampling date",
+        "depth_differs_between_workbooks": "Edaphic workbook gives another depth interval",
+        "depth_interval_unreadable": "Depth interval cannot be read",
+        "paired_by_order_of_appearance": "Metals and edaphic rows paired by order of appearance",
+        "quality_control_sample_of_unknown_type": "Quality-control sample of unknown type",
+        "field_duplicate_not_independent": "Field duplicate, not an independent sample",
+        "rock_sample_in_soil_dataset": "Rock sample (horizon R)",
+        "censored_limit_without_number": "Reported below a limit that has no number",
+        "unparseable_value": "Reported value cannot be read as a number",
+        "texture_fractions_do_not_sum_to_100": "Sand, silt and clay do not sum to 100%",
+        "data_owner_qc_finding": "Finding of the data owner's QC log",
+        "data_owner_qc_cell_detail": "Cell-level detail of the data owner's QC log"
+      },
+      "features": {
+        "assistant": false,
+        "catchment": false
+      }
     }
   },
   "overlays": {
