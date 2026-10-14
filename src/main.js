@@ -32,16 +32,13 @@ function datasetUrl(id) {
   return `${url.pathname}${url.search}`;
 }
 
-function renderDatasetSwitcher() {
-  const switcher = document.getElementById("datasetSwitcher");
-  switcher.replaceChildren(...Object.entries(state.datasets).map(([id, dataset]) => {
-    const link = document.createElement("a");
-    link.href = datasetUrl(id);
-    link.textContent = dataset.title;
-    link.classList.toggle("active", id === state.dataset.id);
-    link.setAttribute("aria-current", id === state.dataset.id ? "page" : "false");
-    return link;
-  }));
+// The dataset is chosen in the central strip. Changing it reloads the same explorer
+// with ?dataset=<id>; it never opens a second page.
+function renderDatasetSelect() {
+  const select = document.getElementById("datasetSelect");
+  select.replaceChildren(...Object.entries(state.datasets).map(([id, dataset]) => new Option(dataset.title, id)));
+  select.value = state.dataset.id;
+  select.addEventListener("change", () => window.location.assign(datasetUrl(select.value)));
 }
 
 function configureDatasetFeatures() {
@@ -57,8 +54,7 @@ async function start() {
   await loadConfig(datasetId);
   readUrlState();
   useProjection(state.dataset.projection);
-  document.getElementById("datasetTitle").textContent = state.dataset.title;
-  renderDatasetSwitcher();
+  renderDatasetSelect();
   const assistantEnabled = configureDatasetFeatures();
   bindLayout();
   showTab(state.view);
