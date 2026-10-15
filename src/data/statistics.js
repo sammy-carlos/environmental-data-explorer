@@ -3,19 +3,21 @@ import { quote } from "../lib/sql.js";
 import { query } from "./database.js";
 import { MEASURED, selectionSource, selectionWhere } from "./selection.js";
 
-let limits = null;
+// Per dataset, computed once.
+const limits = new Map();
 
 // P95 and P99 of every parameter across the whole release, the reference for the
 // amber and red highlights. They never change with the filters.
 export async function parameterLimits() {
-  if (limits) return limits;
+  if (limits.has(state.dataset.id)) return limits.get(state.dataset.id);
   const rows = await query(`
     SELECT parameter_code, quantile_cont(numeric_value, 0.95) AS p95, quantile_cont(numeric_value, 0.99) AS p99
     FROM observations WHERE quality_status = 'VALID' AND ${MEASURED}
     GROUP BY parameter_code
   `);
-  limits = new Map(rows.map((row) => [row.parameter_code, row]));
-  return limits;
+  const byParameter = new Map(rows.map((row) => [row.parameter_code, row]));
+  limits.set(state.dataset.id, byParameter);
+  return byParameter;
 }
 
 export async function loadScale(parameter) {

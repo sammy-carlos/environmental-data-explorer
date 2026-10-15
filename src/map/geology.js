@@ -204,8 +204,7 @@ export async function addGeologyLayers() {
   }
 
   bindClicks();
-  // The map is never idle (the exceedance halo pulses), so the legend follows the moves
-  // and the arrival of geology tiles instead.
+  // The legend follows the moves and the arrival of geology tiles.
   let timer;
   const schedule = () => {
     window.clearTimeout(timer);

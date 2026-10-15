@@ -1,9 +1,11 @@
 import { escapeHtml, formatNumber } from "../lib/format.js";
+import { CATEGORIES, PALETTE, TOP } from "../map/style.js";
 
-// Charts for the conversation, drawn with Chart.js in the explorer's colours: amber and
-// red mark values above the dataset P95 and P99, as on the map.
-const COLORS = ["#1c5b4f", "#ce8b2c", "#3a6ea5", "#a34c32", "#6d5a9c", "#2f8f83"];
-const LEVELS = { P95: "#e0a400", P99: "#d62828" };
+// Charts for the conversation, drawn with Chart.js in the map's data colours: series take
+// the fixed categorical order, and values above the dataset P95 and P99 the dark blue
+// steps the map uses for them.
+const COLORS = CATEGORIES;
+const LEVELS = { P95: PALETTE[3], P99: TOP };
 const TICKS = { font: { size: 9 } };
 
 function histogram(values) {

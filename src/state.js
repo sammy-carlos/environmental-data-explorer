@@ -2,6 +2,9 @@
 export const state = {
   dataset: null,
   datasets: {},
+  defaultDataset: null,
+  // The map frame shared by every dataset, so switching keeps looking at the same place.
+  frame: null,
   overlays: {},
   assistant: null,
   session: null,

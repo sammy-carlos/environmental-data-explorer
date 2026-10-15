@@ -1,7 +1,8 @@
 import { state } from "../state.js";
 import { clearSession } from "../auth/credentials.js";
 
-let local = null;
+// Per dataset: whether it is read from data/ and its release manifest.
+const local = new Map();
 
 // Files read from Hugging Face are kept in the browser's Cache Storage, so a second
 // visit reads them without the network. Tables are keyed by the sha256 that the
@@ -11,20 +12,19 @@ let local = null;
 const CACHE_NAME = "explorer-datasets-v1";
 const CACHE_ORIGIN = "https://dataset-cache.invalid";
 const traffic = { cached: 0, downloaded: 0, bytes: 0 };
-let manifestRequest = null;
+const manifestRequests = new Map();
 
 // On localhost the dataset can be synced into data/ with scripts/sync-data.sh;
 // everywhere else the files come from the private Hugging Face release.
 export async function usesLocalData() {
-  if (local !== null) return local;
-  if (!["localhost", "127.0.0.1"].includes(window.location.hostname)) return (local = false);
-  try {
-    const response = await fetch(`${state.dataset.localPath}/manifest.json`, { method: "HEAD", cache: "no-store" });
-    local = response.ok;
-  } catch {
-    local = false;
+  const id = state.dataset.id;
+  if (local.has(id)) return local.get(id);
+  let found = false;
+  if (["localhost", "127.0.0.1"].includes(window.location.hostname)) {
+    found = await fetch(`${state.dataset.localPath}/manifest.json`, { method: "HEAD", cache: "no-store" }).then((response) => response.ok, () => false);
   }
-  return local;
+  local.set(id, found);
+  return found;
 }
 
 export function localUrl(path) {
@@ -75,7 +75,8 @@ async function sha256Hex(bytes) {
 // that fails the copy kept for this revision is used, and without one the files are
 // read as they were before the cache existed.
 function releaseManifest(cache) {
-  manifestRequest ??= (async () => {
+  const id = state.dataset.id;
+  if (!manifestRequests.has(id)) manifestRequests.set(id, (async () => {
     try {
       const bytes = await download("manifest.json");
       await cache?.put(revisionKey("manifest.json"), new Response(bytes));
@@ -86,8 +87,8 @@ function releaseManifest(cache) {
       console.warn("Release manifest unavailable, reading files without the cache:", error);
       return null;
     }
-  })();
-  return manifestRequest;
+  })());
+  return manifestRequests.get(id);
 }
 
 async function cachedFile(path) {

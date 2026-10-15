@@ -18,7 +18,7 @@ const SOURCES = {
 const BASEMAPS = { light: ["light", "light-labels"], topo: ["topo"], satellite: ["satellite", "satellite-labels"] };
 
 // Drawn areas use the geojson.io palette: indigo features, blue when selected.
-const DRAW_COLOR = ["case", ["==", ["get", "active"], "true"], "#3195ff", "#312E81"];
+const DRAW_COLOR = ["case", ["==", ["get", "active"], "true"], "#3195ff", "#18201d"];
 const DRAW_STYLES = [
   { id: "gl-draw-polygon-fill", type: "fill", filter: ["all", ["==", "$type", "Polygon"]], paint: { "fill-color": DRAW_COLOR, "fill-opacity": 0.3 } },
   { id: "gl-draw-lines", type: "line", filter: ["any", ["==", "$type", "LineString"], ["==", "$type", "Polygon"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": DRAW_COLOR, "line-width": 2 } },

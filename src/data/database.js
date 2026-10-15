@@ -133,7 +133,16 @@ const SOIL_OBSERVATIONS = `
 
 const OBSERVATIONS = { flora: FLORA_OBSERVATIONS, soils: SOIL_OBSERVATIONS };
 
+// Each dataset keeps its own DuckDB once opened, so switching back to it is instant.
+const opened = new Map();
+
 export async function openDatabase(onStep) {
+  const kept = opened.get(state.dataset.id);
+  if (kept) {
+    Object.assign(state.dataset, { available: kept.available, parameters: kept.parameters });
+    state.db = kept.connection;
+    return;
+  }
   const bundle = await duckdb.selectBundle(duckdb.getJsDelivrBundles());
   const workerUrl = URL.createObjectURL(new Blob([`importScripts("${bundle.mainWorker}");`], { type: "text/javascript" }));
   const db = new duckdb.AsyncDuckDB(new duckdb.VoidLogger(), new Worker(workerUrl));
@@ -169,6 +178,7 @@ export async function openDatabase(onStep) {
   // the config win over the names in parameters.parquet.
   const names = rowsOf(await state.db.query("SELECT parameter_code, parameter_name FROM read_parquet('parameters.parquet')"));
   state.dataset.parameters = { ...Object.fromEntries(names.map((row) => [row.parameter_code, row.parameter_name])), ...state.dataset.parameters };
+  opened.set(state.dataset.id, { connection: state.db, available: state.dataset.available, parameters: state.dataset.parameters });
 }
 
 export async function query(sql, options) {

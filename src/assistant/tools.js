@@ -5,6 +5,7 @@ import { quote, readOnlySql } from "../lib/sql.js";
 import { query } from "../data/database.js";
 import { METRICS } from "../data/metrics.js";
 import { densestStations, showExplorerMap, showFlow, showStations, showThematic } from "../map/assistant-layer.js";
+import { ABOVE_REFERENCE } from "../map/style.js";
 import { applyFilters, applySql } from "../panel/explorer.js";
 import { clearAreas } from "../map/areas.js";
 import { readDocument } from "./prompt.js";
@@ -268,6 +269,7 @@ async function runMetric(name, input, ui) {
     const { shown } = await showThematic(rows.map((row) => ({ code: row.station_code, value: row.times_threshold })), {
       title: `${label(input.parameter)}: highest value against ${name}`,
       caption: `Times ${name} (${input.threshold}); only stations above it`,
+      colors: ABOVE_REFERENCE,
     });
     drawn += `; ${shown.length} stations above the value mapped by how many times they exceed it`;
   } else if (metric.map === "trend" && rows.length) {

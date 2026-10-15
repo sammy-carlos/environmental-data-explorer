@@ -9,7 +9,9 @@ import { map } from "./map.js";
 // context tables (MERIT Hydro, 90 m): its outline, the station and the stations that
 // drain to it. Stations without usable coordinates have no catchment.
 const EMPTY = { type: "FeatureCollection", features: [] };
-const COLOR = "#1D4ED8";
+// Ink with a white casing: a context outline that reads on every basemap and is never
+// taken for the blue of the data.
+const COLOR = "#18201d";
 const SOURCES = ["catchment", "catchment-upstream", "catchment-outlet"];
 const $ = (id) => document.getElementById(id);
 const COVER = { tree: "Tree cover", shrub: "Shrubland", grass: "Grassland", cropland: "Cropland", built: "Built-up", bare: "Bare ground", snow_ice: "Snow and ice", water: "Water", wetland: "Wetland" };
@@ -17,10 +19,12 @@ let request = 0;
 let shown = null;
 
 export function addCatchmentLayers() {
+  if (map.getSource("catchment")) return;
   for (const id of SOURCES) map.addSource(id, { type: "geojson", data: EMPTY });
   // Under the sample points, so the data stays readable on top of the outline.
   map.addLayer({ id: "catchment-fill", type: "fill", source: "catchment", paint: { "fill-color": COLOR, "fill-opacity": 0.08 } }, "context-points");
-  map.addLayer({ id: "catchment-line", type: "line", source: "catchment", paint: { "line-color": COLOR, "line-width": 2, "line-opacity": 0.85 } }, "context-points");
+  map.addLayer({ id: "catchment-casing", type: "line", source: "catchment", paint: { "line-color": "#ffffff", "line-width": 4, "line-opacity": 0.85 } }, "context-points");
+  map.addLayer({ id: "catchment-line", type: "line", source: "catchment", paint: { "line-color": COLOR, "line-width": 1.6, "line-opacity": 0.9 } }, "context-points");
   // Thin rings that grow with zoom, so a catchment with hundreds of stations stays legible.
   map.addLayer({
     id: "catchment-upstream", type: "circle", source: "catchment-upstream",

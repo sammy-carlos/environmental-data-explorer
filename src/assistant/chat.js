@@ -256,6 +256,18 @@ export function playAnswer(text) {
   updateComposer();
 }
 
+export function chatIsBusy() {
+  return busy;
+}
+
+// A new conversation; also used when the dataset changes, since answers belong to one dataset.
+export function resetChat() {
+  history.length = 0;
+  $("chatLog").innerHTML = EMPTY_CHAT;
+  clearAssistantDrawings();
+  updateComposer();
+}
+
 export function bindChat() {
   const form = document.querySelector(".composer");
   form.addEventListener("submit", (event) => {
@@ -272,12 +284,7 @@ export function bindChat() {
       form.requestSubmit();
     }
   });
-  $("newChat").addEventListener("click", () => {
-    history.length = 0;
-    $("chatLog").innerHTML = EMPTY_CHAT;
-    clearAssistantDrawings();
-    updateComposer();
-  });
+  $("newChat").addEventListener("click", resetChat);
   $("exportChat").addEventListener("click", () => downloadConversation($("exportChat")));
   $("chatLog").addEventListener("click", async (event) => {
     const pdf = event.target.closest(".turn-pdf");

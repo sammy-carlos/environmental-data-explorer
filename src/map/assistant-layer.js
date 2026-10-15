@@ -26,11 +26,11 @@ let mode = null;
 export function addAssistantLayers() {
   map.addSource("thematic", { type: "geojson", data: EMPTY });
   map.addSource("flow-arrows", { type: "geojson", data: EMPTY });
-  map.addLayer({ id: "flow-lines", type: "line", source: "flow-arrows", paint: { "line-color": "#312E81", "line-width": 2, "line-opacity": 0.8 } });
+  map.addLayer({ id: "flow-lines", type: "line", source: "flow-arrows", paint: { "line-color": "#18201d", "line-width": 2, "line-opacity": 0.8 } });
   map.addLayer({
     id: "flow-heads", type: "symbol", source: "flow-arrows",
     layout: { "symbol-placement": "line", "symbol-spacing": 36, "text-field": ">", "text-size": 13, "text-keep-upright": false, "text-allow-overlap": true },
-    paint: { "text-color": "#312E81" },
+    paint: { "text-color": "#18201d" },
   });
   map.addSource("marked-stations", { type: "geojson", data: EMPTY });
   map.addLayer({
@@ -39,12 +39,12 @@ export function addAssistantLayers() {
   });
   map.addLayer({
     id: "marked-ring", type: "circle", source: "marked-stations",
-    paint: { "circle-radius": 11, "circle-color": "rgba(49,46,129,.08)", "circle-stroke-width": 2, "circle-stroke-color": "#312E81" },
+    paint: { "circle-radius": 11, "circle-color": "rgba(24,32,29,.08)", "circle-stroke-width": 2, "circle-stroke-color": "#18201d" },
   });
   map.addLayer({
     id: "marked-label", type: "symbol", source: "marked-stations",
     layout: { "text-field": ["get", "label"], "text-size": 10.5, "text-offset": [0, -1.9], "text-anchor": "bottom" },
-    paint: { "text-color": "#312E81", "text-halo-color": "#ffffff", "text-halo-width": 2 },
+    paint: { "text-color": "#18201d", "text-halo-color": "#ffffff", "text-halo-width": 2 },
   });
   map.on("click", "thematic-points", (event) => {
     const { code, value } = event.features[0].properties;
@@ -208,7 +208,9 @@ export async function showFlow(pairs, parameter) {
 
 // Colours stations by a value the answer computed. rows are { code, value } in the order
 // to number them; outline "densest" also draws the area around the heaviest group.
-export async function showThematic(rows, { title, caption, outline: area = null, weights = null } = {}) {
+// colors: the ramp of the map, blue by default; a comparison with a reference value passes
+// ABOVE_REFERENCE, the only red of the explorer.
+export async function showThematic(rows, { title, caption, outline: area = null, weights = null, colors = PALETTE } = {}) {
   map.getSource("flow-arrows").setData(EMPTY);
   const positions = await stationPositions(rows.map((row) => row.code));
   const found = rows.filter((row) => positions.has(row.code) && Number.isFinite(Number(row.value)));
@@ -219,7 +221,8 @@ export async function showThematic(rows, { title, caption, outline: area = null,
   });
   const values = found.map((row) => Number(row.value)).sort((a, b) => a - b);
   const stops = [0, 0.25, 0.5, 0.75, 1].map((fraction) => values[Math.round((values.length - 1) * fraction)]);
-  map.setPaintProperty("thematic-points", "circle-color", values[0] < values.at(-1) ? rampExpression(stops) : PALETTE[2]);
+  map.setPaintProperty("thematic-points", "circle-color", values[0] < values.at(-1) ? rampExpression(stops, "value", colors) : colors[2]);
+  document.querySelector(".thematic-ramp i").style.background = `linear-gradient(90deg,${colors.join(",")})`;
 
   let frame = found.map((row) => positions.get(row.code));
   let group = [];

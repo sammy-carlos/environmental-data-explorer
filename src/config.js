@@ -5,12 +5,21 @@ export async function loadConfig(datasetId) {
     fetch("config/datasets.json", { cache: "no-cache" }).then((response) => response.json()),
     fetch("config/assistant.json", { cache: "no-cache" }).then((response) => response.json()),
   ]);
-  const id = datasets.datasets[datasetId] ? datasetId : datasets.default;
-  state.dataset = { id, ...datasets.datasets[id] };
   state.datasets = datasets.datasets;
+  state.defaultDataset = datasets.default;
+  state.frame = datasets.frame || null;
   state.overlays = datasets.overlays || {};
   state.assistant = assistant;
-  state.filters.parameter = state.dataset.defaultParameter;
+  selectDataset(datasets.datasets[datasetId] ? datasetId : datasets.default);
+}
+
+// Makes a dataset the current one and starts its selection from the defaults. Its tables
+// are opened by openDatabase, which keeps each dataset loaded once it has been opened.
+export function selectDataset(id) {
+  state.dataset = { id, ...state.datasets[id] };
+  Object.assign(state.filters, { parameter: state.dataset.defaultParameter, quality: "VALID", from: null, to: null, repeated: false });
+  state.mode = "filters";
+  state.table.page = 1;
 }
 
 export function parameterLabel(code, name) {

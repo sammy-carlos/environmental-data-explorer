@@ -30,9 +30,11 @@ async function sampleSection(row, sampleView) {
   if (!results.length) return "";
   results.sort((a, b) => parameterLabel(a.parameter_code, a.parameter_name).localeCompare(parameterLabel(b.parameter_code, b.parameter_name)));
   const counts = { p95: 0, p99: 0 };
+  // Only the metals of concern are marked; a high pH or nutrient is not a reason to look.
+  const marked = new Set(state.dataset.contaminants ?? []);
   const rows = results.map((item) => {
     const limit = limits.get(item.parameter_code) || {};
-    const level = item.qualifier === "EQUAL" ? exceedanceLevel(item.numeric_value, limit.p95, limit.p99) : "";
+    const level = item.qualifier === "EQUAL" && marked.has(item.parameter_code) ? exceedanceLevel(item.numeric_value, limit.p95, limit.p99) : "";
     if (level) counts[level] += 1;
     const value = valueText(item);
     const classes = ["parameter-row", level && `level-${level}`, !sampleView && item.parameter_code === row.parameter_code && "current"].filter(Boolean).join(" ");
@@ -40,7 +42,7 @@ async function sampleSection(row, sampleView) {
   });
   fillParameterPicker(results, row, sampleView);
   return `<section class="detail-section sample-parameters"><h3>All parameters in this sample · ${results.length}</h3>`
-    + `<div class="parameter-legend"><span class="level-p95"><i></i>≥ P95 dataset · ${counts.p95}</span><span class="level-p99"><i></i>≥ P99 dataset · ${counts.p99}</span></div>`
+    + `<div class="parameter-legend"><span class="level-p95"><i></i>Metals in the top 5 % · ${counts.p95}</span><span class="level-p99"><i></i>in the top 1 % · ${counts.p99}</span></div>`
     + `${rows.join("")}</section>`;
 }
 

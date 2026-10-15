@@ -1,5 +1,6 @@
 {
   "default": "sediments",
+  "frame": [[-71.482, -15.064], [-71.174, -14.76]],
   "datasets": {
     "sediments": {
       "title": "Sediments",

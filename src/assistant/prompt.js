@@ -129,7 +129,14 @@ const NOTES = { flora: FLORA_NOTES, soils: SOIL_NOTES };
 // are written for other assistants, and its query patterns are one read_doc away.
 const GUIDE_SECTIONS = ["Dataset at a glance", "Main table", "Data rules"];
 
-let guide = null;
+// The guide of each dataset, read once.
+const guides = new Map();
+
+async function datasetGuide() {
+  const id = state.dataset.id;
+  if (!guides.has(id)) guides.set(id, await datasetFile(state.dataset.documents.assistant));
+  return guides.get(id);
+}
 
 function guideSections(markdown) {
   return markdown.split(/^(?=## )/m)
@@ -139,7 +146,7 @@ function guideSections(markdown) {
 }
 
 export async function systemPrompt() {
-  guide ??= await datasetFile(state.dataset.documents.assistant);
+  const guide = await datasetGuide();
   // The guide and the tools are the same for every question and every user, so they get
   // a cache entry of their own: a new chat reads them at a tenth of the input price.
   return [{ type: "text", text: `${guideSections(guide)}\n\n${NOTES[state.dataset.profile] || SEDIMENT_NOTES}`, cache_control: { type: "ephemeral" } }];
@@ -147,7 +154,7 @@ export async function systemPrompt() {
 
 export async function readDocument(name) {
   if (name === "patterns") {
-    const text = guide ?? await datasetFile(state.dataset.documents.assistant);
+    const text = await datasetGuide();
     const start = text.indexOf("## Query patterns");
     return start >= 0 ? text.slice(start) : "No query patterns in the guide.";
   }

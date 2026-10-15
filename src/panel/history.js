@@ -1,9 +1,11 @@
+import { state } from "../state.js";
 import { parameterLabel } from "../config.js";
 import { escapeHtml, formatDate, formatNumber } from "../lib/format.js";
 import { quote } from "../lib/sql.js";
 import { valueText } from "../data/selection.js";
 import { query } from "../data/database.js";
 import { exceedanceLevel, parameterLimits } from "../data/statistics.js";
+import { PALETTE, TOP } from "../map/style.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -11,11 +13,11 @@ const $ = (id) => document.getElementById(id);
 // dates, which the map draws as points on top of each other; here they are one series:
 // a chart of the open element and the list of dates behind it.
 const MEASURED = "qualifier = 'EQUAL' AND numeric_value > 0";
-// A lighter green than the interface, so the series does not read as a control.
-const COLOR = "#3f9b78";
+// The blue of the map's data, never the interface green.
+const COLOR = PALETTE[0];
 const LIMIT_COLOR = "#8a94a6";
-// The same amber and red the map uses for values above the dataset P95 and P99.
-export const LEVELS = { p95: "#e0a400", p99: "#d62828" };
+// Metals of concern above the dataset P95 and P99, in the dark steps the map uses for them.
+export const LEVELS = { p95: PALETTE[3], p99: TOP };
 export const SERIES_COLORS = { value: COLOR, limit: LIMIT_COLOR };
 const CURRENT_COLOR = "#18201d";
 let chart = null;
@@ -213,7 +215,9 @@ export async function renderHistory(target, row, { sampleView = false } = {}) {
   }
 
   const unit = rows.find((item) => item.reported_unit)?.reported_unit || row.reported_unit;
-  const limit = sampleView ? {} : (await parameterLimits()).get(row.parameter_code) || {};
+  // Only the metals of concern are marked; a high pH or nutrient is not a reason to look.
+  const marked = !sampleView && (state.dataset.contaminants ?? []).includes(row.parameter_code);
+  const limit = marked ? (await parameterLimits()).get(row.parameter_code) || {} : {};
   const title = sampleView
     ? `This station over time · ${rows.length} sampling dates`
     : `This station over time · ${label} · ${rows.length} results`;

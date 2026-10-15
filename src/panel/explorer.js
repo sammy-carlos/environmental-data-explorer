@@ -30,10 +30,6 @@ export async function setupFilters() {
   $("dataParameter").replaceChildren(...options());
   // The legend on the map carries the same list, so the element can be changed there too.
   $("mapParameter").replaceChildren(...options());
-  $("mapParameter").addEventListener("change", async (event) => {
-    await applyFilters({ parameter: event.target.value });
-    await showParameterInRecord(event.target.value);
-  });
   for (const id of ["periodFrom", "periodTo"]) Object.assign($(id), { min: state.years.first, max: state.years.last, step: 1 });
   state.sql.initial = [
     "SELECT *",
@@ -226,6 +222,10 @@ async function reset() {
 }
 
 export function bindExplorer() {
+  $("mapParameter").addEventListener("change", async (event) => {
+    await applyFilters({ parameter: event.target.value });
+    await showParameterInRecord(event.target.value);
+  });
   $("dataParameter").addEventListener("change", async (event) => {
     await applyFilters({ parameter: event.target.value });
     await showParameterInRecord(event.target.value);

@@ -7,11 +7,10 @@ import { renderLegend } from "../panel/legend.js";
 import { writeUrlState } from "../url-state.js";
 import { fitTo, map } from "./map.js";
 import { refreshCatchmentRings } from "./catchment.js";
-import { EXCEEDANCE_SIZE, POINT_SIZE, colorExpression, radiusAt, yearExpression, zoomRadius } from "./style.js";
+import { EXCEEDANCE_SIZE, PALETTE, POINT_SIZE, TOP, colorExpression, marksHighValues, yearExpression, zoomRadius } from "./style.js";
 
 const EMPTY = { type: "FeatureCollection", features: [] };
-const DATA_LAYERS = ["context-points", "sample-halo", "samples", "sample-density", "cluster-circles", "cluster-count", "cluster-points", "exceedance-pulse", "exceedance", "selected-halo", "selected-point", "selected-label"];
-let exceedanceCount = 0;
+const DATA_LAYERS = ["context-points", "sample-halo", "samples", "sample-density", "cluster-circles", "cluster-count", "cluster-points", "exceedance", "selected-halo", "selected-point", "selected-label"];
 let allFeatures = [];
 
 function toFeature(row, properties) {
@@ -93,7 +92,9 @@ export function showPeriod() {
 export function addDataLayers(features) {
   allFeatures = features;
   state.map.features = inPeriod(features);
-  fitTo(state.map.features.map((feature) => feature.geometry.coordinates), { animate: false, maxZoom: 12 });
+  // Every dataset opens on the same frame, so switching keeps looking at the same place.
+  const frame = state.frame ?? state.map.features.map((feature) => feature.geometry.coordinates);
+  fitTo(frame, { animate: false, maxZoom: 12 });
   state.map.baseZoom = map.getZoom();
   const data = { type: "FeatureCollection", features: state.map.features };
 
@@ -109,7 +110,7 @@ export function addDataLayers(features) {
   map.addLayer({ id: "sample-halo", type: "circle", source: "samples", paint: { "circle-radius": zoomRadius(POINT_SIZE, 1.5), "circle-color": "#ffffff", "circle-opacity": 0 } });
   map.addLayer({
     id: "samples", type: "circle", source: "samples",
-    paint: { "circle-radius": zoomRadius(POINT_SIZE), "circle-color": "#1c5b4f", "circle-stroke-width": 0.7, "circle-stroke-color": "#ffffff", "circle-opacity": 0.9 },
+    paint: { "circle-radius": zoomRadius(POINT_SIZE), "circle-color": PALETTE[1], "circle-stroke-width": 1.1, "circle-stroke-color": "#ffffff", "circle-opacity": 0.92 },
   });
   map.addLayer({
     id: "sample-density", type: "heatmap", source: "samples", layout: { visibility: "none" },
@@ -118,13 +119,13 @@ export function addDataLayers(features) {
       "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 7, 0.7, 13, 2.2],
       "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 7, 8, 13, 28],
       "heatmap-opacity": 0.82,
-      "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(204,228,218,0)", 0.25, "#a9d2c3", 0.5, "#55a087", 0.75, "#236957", 1, "#ce8b2c"],
+      "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(168,221,147,0)", 0.25, "#cdeebd", 0.5, PALETTE[0], 0.75, PALETTE[2], 1, PALETTE[4]],
     },
   });
   map.addLayer({
     id: "cluster-circles", type: "circle", source: "sample-clusters", filter: ["has", "point_count"], layout: { visibility: "none" },
     paint: {
-      "circle-color": ["step", ["get", "point_count"], "#79b29f", 25, "#236957", 100, "#ce8b2c"],
+      "circle-color": ["step", ["get", "point_count"], PALETTE[0], 25, PALETTE[2], 100, PALETTE[4]],
       "circle-radius": ["step", ["get", "point_count"], 15, 25, 21, 100, 28],
       "circle-stroke-width": 2,
       "circle-stroke-color": "#ffffff",
@@ -137,15 +138,12 @@ export function addDataLayers(features) {
   });
   map.addLayer({
     id: "cluster-points", type: "circle", source: "sample-clusters", filter: ["!", ["has", "point_count"]], layout: { visibility: "none" },
-    paint: { "circle-radius": zoomRadius(POINT_SIZE), "circle-color": "#1c5b4f", "circle-stroke-width": 0.7, "circle-stroke-color": "#ffffff" },
+    paint: { "circle-radius": zoomRadius(POINT_SIZE), "circle-color": PALETTE[1], "circle-stroke-width": 1.1, "circle-stroke-color": "#ffffff" },
   });
-  map.addLayer({
-    id: "exceedance-pulse", type: "circle", source: "samples", filter: exceedanceFilter(),
-    paint: { "circle-radius": 10, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#d62828", "circle-stroke-width": 2, "circle-stroke-opacity": 0.6 },
-  });
+  // The top 1 % of a metal of concern: the darkest step, drawn larger.
   map.addLayer({
     id: "exceedance", type: "circle", source: "samples", filter: exceedanceFilter(),
-    paint: { "circle-radius": zoomRadius(EXCEEDANCE_SIZE), "circle-color": "#d62828", "circle-stroke-width": 1, "circle-stroke-color": "#ffffff" },
+    paint: { "circle-radius": zoomRadius(EXCEEDANCE_SIZE), "circle-color": TOP, "circle-stroke-width": 1.4, "circle-stroke-color": "#ffffff" },
   });
   map.addLayer({
     id: "selected-halo", type: "circle", source: "selected-result",
@@ -153,7 +151,7 @@ export function addDataLayers(features) {
   });
   map.addLayer({
     id: "selected-point", type: "circle", source: "selected-result",
-    paint: { "circle-radius": 9, "circle-color": "#1c5b4f", "circle-stroke-width": 3, "circle-stroke-color": "#18201d" },
+    paint: { "circle-radius": 9, "circle-color": PALETTE[1], "circle-stroke-width": 3, "circle-stroke-color": "#18201d" },
   });
   map.addLayer({
     id: "selected-label", type: "symbol", source: "selected-result",
@@ -162,7 +160,6 @@ export function addDataLayers(features) {
   });
 
   setMapMode(state.map.mode);
-  if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) window.requestAnimationFrame(animatePulse);
 }
 
 // Recomputes what the map shows from the current selection.
@@ -179,25 +176,13 @@ export function applyStyling() {
   for (const layer of ["samples", "cluster-points", "selected-point"]) map.setPaintProperty(layer, "circle-color", expression);
   const weighted = !isAllElements() && state.map.colorField === "concentration" && state.scale.stops;
   map.setPaintProperty("sample-density", "heatmap-weight", weighted ? ["interpolate", ["linear"], ["to-number", ["get", "value"], 0], 0, 0.05, state.scale.stops[4], 1] : 1);
-  for (const layer of ["exceedance-pulse", "exceedance"]) map.setFilter(layer, exceedanceFilter());
-  exceedanceCount = state.scale.p99 == null ? 0 : state.map.features.filter((feature) => Number(feature.properties.value) > state.scale.p99).length;
+  map.setFilter("exceedance", exceedanceFilter());
   renderLegend();
 }
 
 function exceedanceFilter() {
-  return [">", ["to-number", ["get", "value"], -1], state.scale.p99 ?? Number.MAX_VALUE];
-}
-
-// The ring fades in from the dot, expands, fades out and rests before the next beat.
-function animatePulse(time) {
-  if (exceedanceCount && map.getLayoutProperty("exceedance-pulse", "visibility") !== "none") {
-    const phase = (time % 1600) / 1600;
-    const opacity = phase < 0.1 ? phase / 0.1 : Math.max(0, 1 - (phase - 0.1) / 0.65);
-    const core = radiusAt(map.getZoom(), EXCEEDANCE_SIZE);
-    map.setPaintProperty("exceedance-pulse", "circle-radius", core + (1 - (1 - phase) ** 3) * core * 2.6);
-    map.setPaintProperty("exceedance-pulse", "circle-stroke-opacity", 0.9 * opacity);
-  }
-  window.requestAnimationFrame(animatePulse);
+  const limit = marksHighValues() ? state.scale.p99 : null;
+  return [">", ["to-number", ["get", "value"], -1], limit ?? Number.MAX_VALUE];
 }
 
 export function setMapMode(mode) {
@@ -209,7 +194,7 @@ export function setMapMode(mode) {
   map.setLayoutProperty("sample-halo", "visibility", show(mode === "points"));
   map.setLayoutProperty("samples", "visibility", show(mode === "points"));
   map.setLayoutProperty("sample-density", "visibility", show(mode === "density"));
-  for (const layer of ["context-points", "exceedance-pulse", "exceedance"]) map.setLayoutProperty(layer, "visibility", show(mode !== "clusters"));
+  for (const layer of ["context-points", "exceedance"]) map.setLayoutProperty(layer, "visibility", show(mode !== "clusters"));
   for (const layer of ["cluster-circles", "cluster-count", "cluster-points"]) map.setLayoutProperty(layer, "visibility", show(mode === "clusters"));
   for (const layer of ["selected-halo", "selected-point", "selected-label"]) map.setLayoutProperty(layer, "visibility", "visible");
   if (state.ready) writeUrlState();

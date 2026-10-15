@@ -1,12 +1,24 @@
-import { state } from "../state.js";
+import { currentParameter, isAllElements, state } from "../state.js";
 
-export const PALETTE = ["#cce4da", "#79b29f", "#236957", "#ce8b2c", "#a34c32"];
-export const YEAR_PALETTE = ["#dfe9e3", "#a9cbbd", "#6aa38f", "#2f7563", "#15473e"];
+// A magnitude runs from light green to deep teal (CARTO Emrld), lightness rising evenly so
+// it says how much, not whether that is good or bad. The lightest step is pale on the grey
+// basemap, so every point keeps a white edge.
+export const PALETTE = ["#a8dd93", "#6cc08b", "#3d9a84", "#19696f", "#0b4a5a"];
+export const YEAR_PALETTE = PALETTE;
+// The darkest step marks the top 5 %; the top 1 % of a metal of concern is drawn larger,
+// as geochemical atlases mark anomalies by size rather than by colour.
+export const TOP = PALETTE[4];
+// Red is kept for one meaning only: above a reference value somebody gave.
+export const ABOVE_REFERENCE = ["#e37272", "#d03b3b", "#a82b2b", "#7c1d1d", "#4f1010"];
+// Years and campaigns: eight hues in a fixed order that keeps neighbours apart for
+// colour-blind readers; any further category is grey.
+export const CATEGORIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"];
+export const OTHER_CATEGORY = "#a3a39d";
 
 // Points shrink as the user zooms in so nearby stations separate, and grow when
 // zooming out so they stay visible. baseZoom is the zoom that frames the dataset.
 export const POINT_SIZE = { base: 4.5, growth: 0.74, min: 3.6, max: 7.5 };
-export const EXCEEDANCE_SIZE = { base: 5.5, growth: 0.76, min: 4.6, max: 9 };
+export const EXCEEDANCE_SIZE = { base: 7.6, growth: 0.76, min: 6.2, max: 11.5 };
 
 export function radiusAt(zoom, size, extra = 0) {
   const radius = size.base * size.growth ** (zoom - state.map.baseZoom);
@@ -23,7 +35,13 @@ export function zoomRadius(size, extra = 0) {
 }
 
 export function categoricalColor(index) {
-  return `hsl(${Math.round((index * 137.508 + 158) % 360)}, 52%, 43%)`;
+  return CATEGORIES[index] ?? OTHER_CATEGORY;
+}
+
+// High values get the top 5 % and top 1 % marks only for the metals of concern, where a
+// high value is a reason to look. pH, nutrients or texture are shown on the ramp alone.
+export function marksHighValues() {
+  return !isAllElements() && state.map.colorField === "concentration" && (state.dataset.contaminants ?? []).includes(currentParameter());
 }
 
 export function categories(property) {
@@ -48,7 +66,7 @@ export function rampExpression(stops, property = "value", colors = PALETTE) {
 export function colorExpression(field) {
   if (field === "year" || field === "campaign") {
     const list = categories(field);
-    return ["match", ["get", field], ...list.flatMap((category, index) => [category, categoricalColor(index)]), "#69736d"];
+    return ["match", ["get", field], ...list.flatMap((category, index) => [category, categoricalColor(index)]), OTHER_CATEGORY];
   }
   const stops = state.scale.stops ?? [0.05, 0.25, 0.5, 0.75, 0.95].map(percentile);
   return rampExpression(stops);
