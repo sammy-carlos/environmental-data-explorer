@@ -1,7 +1,7 @@
 import * as duckdb from "@duckdb/duckdb-wasm";
 import { state } from "../state.js";
 import { rowsOf } from "../lib/sql.js";
-import { datasetFile, localUrl, usesLocalData } from "./source.js";
+import { datasetFile, localUrl, pruneDatasetCache, usesLocalData } from "./source.js";
 
 // Every quality issue that describes a row, whatever record it was raised on: the
 // source row, its station, sample, analysis, result or, where the release has them,
@@ -160,10 +160,15 @@ export async function openDatabase(onStep) {
     }
   }));
   state.dataset.available = [...state.dataset.tables, ...optional.filter(Boolean)];
+  pruneDatasetCache().catch((error) => console.warn("Dataset cache cleanup failed:", error));
 
   onStep("Building tables");
   state.db = await db.connect();
   await state.db.query(OBSERVATIONS[state.dataset.profile] || SEDIMENT_OBSERVATIONS);
+  // Every parameter of the release is a valid code for the assistant; labels written in
+  // the config win over the names in parameters.parquet.
+  const names = rowsOf(await state.db.query("SELECT parameter_code, parameter_name FROM read_parquet('parameters.parquet')"));
+  state.dataset.parameters = { ...Object.fromEntries(names.map((row) => [row.parameter_code, row.parameter_name])), ...state.dataset.parameters };
 }
 
 export async function query(sql, options) {

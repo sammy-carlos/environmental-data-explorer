@@ -1,4 +1,5 @@
 import { clearSession, saveSession, savedSession, unlock } from "./credentials.js";
+import { clearDatasetCache } from "../data/source.js";
 
 export function signIn() {
   const saved = savedSession();
@@ -51,8 +52,9 @@ export function signIn() {
 }
 
 export function bindSignOut() {
-  document.getElementById("signOut").addEventListener("click", () => {
+  document.getElementById("signOut").addEventListener("click", async () => {
     clearSession();
+    await clearDatasetCache();
     window.location.reload();
   });
 }

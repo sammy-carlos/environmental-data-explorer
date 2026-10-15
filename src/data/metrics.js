@@ -1,6 +1,7 @@
 import { formatNumber } from "../lib/format.js";
 import { quote, quoteList } from "../lib/sql.js";
 import { LOCATED } from "./selection.js";
+import { state } from "../state.js";
 
 // Named, parameterised queries the assistant calls instead of writing SQL from
 // scratch. Each one encodes the dataset rules (valid results, measured values,
@@ -11,7 +12,11 @@ import { LOCATED } from "./selection.js";
 // travel with it as context. chart turns the main rows into a chart for the
 // conversation, map says how the stations are shown, and note adds a line of text.
 
-const SOURCES = { monitoring: "STANDARDIZED", historical: "HISTORICAL_GEOCHEMISTRY" };
+// The data_role of monitoring and of historical data, for the datasets that keep both
+// (config "sources"). Tools of the other datasets have no source filter.
+const sources = () => state.dataset?.sources ?? {};
+// Results reported below a limit: "<" values and those reported as not detected.
+const CENSORED = "qualifier IN ('LESS_THAN', 'NOT_DETECTED')";
 const STATISTICS = {
   max: "max(numeric_value)",
   median: "median(numeric_value)",
@@ -42,7 +47,7 @@ function filters({ parameter: code, source: role = "all", from_year, to_year, wi
   const clauses = ["quality_status = 'VALID'"];
   if (code) clauses.push(`parameter_code = ${quote(code)}`);
   if (measured) clauses.push("qualifier = 'EQUAL'", "numeric_value > 0");
-  if (SOURCES[role]) clauses.push(`data_role = ${quote(SOURCES[role])}`);
+  if (sources()[role]) clauses.push(`data_role = ${quote(sources()[role])}`);
   if (Number.isInteger(from_year)) clauses.push(`year(sampling_date) >= ${from_year}`);
   if (Number.isInteger(to_year)) clauses.push(`year(sampling_date) <= ${to_year}`);
   if (within_area) clauses.push("CAST(station_id AS VARCHAR) IN (SELECT station_id FROM spatial_selection)");
@@ -145,7 +150,7 @@ export const METRICS = {
          GROUP BY rule ORDER BY results DESC LIMIT 12`,
         `SELECT caveat, results, round(100.0 * results / total, 1) AS pct_of_results FROM (
            SELECT count(*) AS total,
-                  count(*) FILTER (WHERE qualifier = 'LESS_THAN') AS "below the detection limit",
+                  count(*) FILTER (WHERE ${CENSORED}) AS "below the detection limit",
                   count(*) FILTER (WHERE qualifier = 'EQUAL' AND numeric_value = 0) AS "value recorded as 0, likely not detected",
                   count(*) FILTER (WHERE date_is_estimated) AS "sampling date estimated",
                   count(*) FILTER (WHERE coordinate_status = 'PENDING_REVIEW') AS "coordinates pending review",
@@ -165,8 +170,8 @@ export const METRICS = {
       SELECT count(*) AS results,
              count(*) FILTER (WHERE qualifier = 'EQUAL' AND numeric_value > 0) AS measured,
              count(*) FILTER (WHERE qualifier = 'EQUAL' AND numeric_value = 0) AS recorded_as_zero,
-             count(*) FILTER (WHERE qualifier = 'LESS_THAN') AS below_limit,
-             round(100.0 * count(*) FILTER (WHERE qualifier = 'LESS_THAN') / nullif(count(*), 0), 1) AS below_limit_pct,
+             count(*) FILTER (WHERE ${CENSORED}) AS below_limit,
+             round(100.0 * count(*) FILTER (WHERE ${CENSORED}) / nullif(count(*), 0), 1) AS below_limit_pct,
              min(numeric_value) FILTER (WHERE qualifier = 'EQUAL' AND numeric_value > 0) AS minimum,
              median(numeric_value) FILTER (WHERE qualifier = 'EQUAL' AND numeric_value > 0) AS median,
              avg(numeric_value) FILTER (WHERE qualifier = 'EQUAL' AND numeric_value > 0) AS mean,
@@ -175,7 +180,8 @@ export const METRICS = {
              count(DISTINCT station_code) AS stations,
              min(year(sampling_date)) AS first_year,
              max(year(sampling_date)) AS last_year,
-             any_value(canonical_unit) AS unit
+             any_value(canonical_unit) AS unit,
+             string_agg(DISTINCT reported_unit, ', ') AS units_reported
       FROM observations WHERE ${filters(input, { measured: false })}`,
   },
 
@@ -341,7 +347,7 @@ export const METRICS = {
   },
 
   annual_trend: {
-    description: "Change over time of one parameter: one value per year, drawn as a line chart, with the slope of the trend. Prefer source monitoring (historical dates are partly estimated).",
+    description: "Change over time of one parameter: one value per year, drawn as a line chart, with the slope of the trend. Prefer source monitoring where the dataset offers it (historical dates are partly estimated).",
     input_schema: { type: "object", properties: { parameter, statistic, ...common }, required: ["parameter"] },
     sql: (input) => `
       SELECT year(sampling_date) AS year, ${measure(input.statistic)} AS value, count(*) AS measured
@@ -380,7 +386,7 @@ export const METRICS = {
   },
 
   compare_trends: {
-    description: "Change over time for 2 to 6 elements on one chart: per year, the share of results above each element's dataset P95, and the median. Prefer source monitoring.",
+    description: "Change over time for 2 to 6 elements on one chart: per year, the share of results above each element's dataset P95, and the median. Prefer source monitoring where the dataset offers it.",
     input_schema: { type: "object", properties: { parameters, ...common }, required: ["parameters"] },
     sql: (input) => `
       WITH ${percentiles("p95", 0.95)}
@@ -423,7 +429,7 @@ export const METRICS = {
   },
 
   compare_periods: {
-    description: "Before a year against that year and after, for 1 to 8 elements: results, median and share above the dataset P95 in each period. Prefer source monitoring. Drawn as a bar chart.",
+    description: "Before a year against that year and after, for 1 to 8 elements: results, median and share above the dataset P95 in each period. Prefer source monitoring where the dataset offers it. Drawn as a bar chart.",
     input_schema: {
       type: "object",
       properties: { parameters, split_year: { type: "integer" }, source, within_area: common.within_area },
@@ -462,12 +468,12 @@ export const METRICS = {
   },
 
   element_families: {
-    description: "How contaminants relate: which elements rise and fall together across samples (Spearman correlation), grouped into families, with each element's closest partners. Uses monitoring samples and the elements with at least 200 measured values; for elements mostly below the detection limit it reflects the higher values only.",
+    description: "How contaminants relate: which elements rise and fall together across samples (Spearman correlation), grouped into families, with each element's closest partners. Uses monitoring samples where the dataset separates them, and the elements with at least 200 measured values; for elements mostly below the detection limit it reflects the higher values only.",
     input_schema: { type: "object", properties: { within_area: common.within_area, from_year: common.from_year, to_year: common.to_year } },
     sql: (input, context) => `
       WITH eligible AS (
         SELECT parameter_code FROM observations
-        WHERE data_role = 'STANDARDIZED' AND quality_status = 'VALID' AND parameter_code NOT IN (${quoteList(context.fieldChemistry)})
+        WHERE ${sources().monitoring ? `data_role = ${quote(sources().monitoring)} AND ` : ""}quality_status = 'VALID' AND parameter_code NOT IN (${quoteList(context.fieldChemistry)})
         GROUP BY parameter_code HAVING count(*) FILTER (WHERE qualifier = 'EQUAL' AND numeric_value > 0) >= 200
       ),
       wide AS (
@@ -553,7 +559,7 @@ export const METRICS = {
   },
 
   above_threshold: {
-    description: "Share of results and stations above a value the user gives (a sediment guideline, a standard, a background level) for one parameter, with the stations that exceed it and by how much. The comparison only holds when the data and the value share a unit: only copper has one (mg/kg, inferred), so say so for any other parameter. Maps stations by their maximum divided by the value.",
+    description: "Share of results and stations above a value the user gives (a guideline, a standard, a background level) for one parameter, with the stations that exceed it and by how much. The comparison only holds when the data and the value share a unit: the result gives the unit found in the data (unit_in_data), so say when it is missing, mixed or inferred. Maps stations by their maximum divided by the value.",
     input_schema: {
       type: "object",
       properties: { parameter, threshold: { type: "number" }, label: { type: "string", description: "Name of the value, e.g. CCME PEL" }, ...common },
@@ -571,7 +577,8 @@ export const METRICS = {
         `SELECT count(*) AS measured, count(*) FILTER (WHERE numeric_value > ${value}) AS above,
                 round(100.0 * count(*) FILTER (WHERE numeric_value > ${value}) / nullif(count(*), 0), 1) AS above_pct,
                 count(DISTINCT station_code) AS stations, count(DISTINCT station_code) FILTER (WHERE numeric_value > ${value}) AS stations_above,
-                any_value(reported_unit) AS unit_in_data, bool_or(unit_is_inferred) AS unit_inferred
+                string_agg(DISTINCT reported_unit, ', ') AS unit_in_data, count(*) FILTER (WHERE reported_unit IS NULL) AS results_without_unit,
+                bool_or(unit_is_inferred) AS unit_inferred
          FROM observations WHERE ${filters(input)}`,
       ];
     },
@@ -593,7 +600,7 @@ export const METRICS = {
                  count(DISTINCT sampling_date) AS dates, min(sampling_date) AS first_date, max(sampling_date) AS last_date
           FROM observations WHERE ${where} GROUP BY station_id
         )
-        SELECT source_name, CASE data_role WHEN 'HISTORICAL_GEOCHEMISTRY' THEN 'historical geochemistry' ELSE 'monitoring' END AS kind,
+        SELECT source_name, lower(replace(data_role, '_', ' ')) AS kind,
                count(*) AS stations, count(*) FILTER (WHERE dates > 1) AS stations_with_series,
                round(avg(dates), 2) AS avg_dates, max(dates) AS max_dates,
                min(year(first_date)) AS first_year, max(year(last_date)) AS last_year,
@@ -606,7 +613,9 @@ export const METRICS = {
         SELECT CASE WHEN dates = 1 THEN 'one date' WHEN dates <= 3 THEN '2 to 3 dates' WHEN dates <= 9 THEN '4 to 9 dates' ELSE '10 or more' END AS group_of_stations,
                count(*) AS stations FROM per_station GROUP BY 1 ORDER BY min(dates)`];
     },
-    note: () => "\nStations sampled once come from geochemical prospecting; the repeated ones are the monitoring network, so a trend can only be measured on those.",
+    note: () => sources().historical
+      ? "\nStations sampled once come from geochemical prospecting; the repeated ones are the monitoring network, so a trend can only be measured on those."
+      : "\nA trend can only be measured on the stations sampled on several dates.",
   },
 
   river_pairs: {
@@ -700,7 +709,7 @@ export const METRICS = {
                  regexp_extract(lower(strip_accents(zone_description)), 'aguas (arriba|abajo)', 1) AS side,
                  trim(regexp_extract(lower(strip_accents(zone_description)), 'aguas (arriba|abajo) (del |de la |de los |de )?([^;]*)', 3), ' .') AS reference
           FROM observations WHERE quality_status = 'VALID' AND zone_description IS NOT NULL
-            ${SOURCES[input.source] ? `AND data_role = ${quote(SOURCES[input.source])}` : ""}
+            ${sources()[input.source] ? `AND data_role = ${quote(sources()[input.source])}` : ""}
         ),
         -- The same place is often written two ways ("union con el rio paccpaco", "union del rio
         -- paccpaco y rio ccamacmayo"), so sides pair on the first river or creek named.
@@ -799,7 +808,7 @@ export const METRICS = {
       WITH ${percentiles("p95", 0.95)},
       ${percentiles("p99", 0.99)}
       SELECT parameter_code, any_value(parameter_name) AS element, count(*) AS results,
-             round(100.0 * count(*) FILTER (WHERE qualifier = 'LESS_THAN') / count(*), 1) AS below_limit_pct,
+             round(100.0 * count(*) FILTER (WHERE ${CENSORED}) / count(*), 1) AS below_limit_pct,
              median(numeric_value) FILTER (WHERE qualifier = 'EQUAL' AND numeric_value > 0) AS median,
              max(numeric_value) FILTER (WHERE qualifier = 'EQUAL' AND numeric_value > 0) AS maximum,
              round(100.0 * count(*) FILTER (WHERE qualifier = 'EQUAL' AND numeric_value > p95.p95) / count(*), 1) AS above_p95_pct,

@@ -7,7 +7,7 @@ import { Anthropic, modelLabel, streamTurn } from "./claude.js";
 import { renderChart } from "./charts.js";
 import { downloadConversation, downloadTurn, keepTurnMap } from "./report.js";
 import { selectionNote, systemPrompt } from "./prompt.js";
-import { TOOLS, runTool } from "./tools.js";
+import { runTool, tools } from "./tools.js";
 
 const $ = (id) => document.getElementById(id);
 const EMPTY_CHAT = '<p class="chat-empty">Ask anything about the data: a summary, the highest values, a trend over time or a comparison between campaigns. Answers follow the current selection in Data explorer.</p>';
@@ -162,7 +162,7 @@ async function ask(question) {
       };
       let reply;
       try {
-        reply = await streamTurn({ apiKey: apiKey(), system, tools: TOOLS, messages: history, onText });
+        reply = await streamTurn({ apiKey: apiKey(), system, tools: tools(), messages: history, onText });
         addUsage(usage, reply.usage);
         parseRetries = 0;
       } catch (error) {

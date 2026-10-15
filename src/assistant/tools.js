@@ -81,8 +81,36 @@ const DEFINITIONS = [
   },
 ];
 
+// Each dataset gets the tools its tables can answer. The river and catchment tools need
+// the drainage network (feature catchment), the field-sheet tools need zone (feature
+// zones), and the source filter exists only where monitoring and historical data are
+// kept apart (config sources).
+const NEEDS = {
+  river_pairs: "catchment",
+  catchment_profile: "catchment",
+  compare_zones: "zones",
+  compare_site_types: "zones",
+  flow_pairs: "zones",
+};
+
+function withoutFields(schema, fields) {
+  if (!fields.length) return schema;
+  const properties = Object.fromEntries(Object.entries(schema.properties).filter(([key]) => !fields.includes(key)));
+  return { ...schema, properties };
+}
+
+function datasetDefinitions() {
+  const features = state.dataset.features ?? {};
+  const absent = [...(state.dataset.sources ? [] : ["source"]), ...(features.zones ? [] : ["zone"])];
+  return DEFINITIONS
+    .filter((tool) => !NEEDS[tool.name] || features[NEEDS[tool.name]])
+    .map((tool) => ({ ...tool, input_schema: withoutFields(tool.input_schema, absent) }));
+}
+
 // Inputs stream eagerly, so the API no longer validates them against the schema.
-export const TOOLS = DEFINITIONS.map((tool) => ({ ...tool, eager_input_streaming: true }));
+export function tools() {
+  return datasetDefinitions().map((tool) => ({ ...tool, eager_input_streaming: true }));
+}
 
 function unknownCode(input) {
   const unknown = [input.parameter, ...(input.parameters ?? [])].filter((code) => code && code !== "all" && !state.dataset.parameters[code]);
@@ -90,7 +118,7 @@ function unknownCode(input) {
 }
 
 export function validateInput(name, input) {
-  const tool = DEFINITIONS.find((item) => item.name === name);
+  const tool = datasetDefinitions().find((item) => item.name === name);
   if (!tool) return `Unknown tool ${name}.`;
   if (!input || typeof input !== "object" || Array.isArray(input)) return "The input must be an object.";
   const { properties, required = [] } = tool.input_schema;

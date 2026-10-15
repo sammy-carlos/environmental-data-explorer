@@ -86,9 +86,14 @@
         "missing_additional_source_file": "Original source file not supplied"
       },
       "optionalTables": ["station_geology", "station_catchment_geology"],
+      "sources": {
+        "monitoring": "STANDARDIZED",
+        "historical": "HISTORICAL_GEOCHEMISTRY"
+      },
       "features": {
         "assistant": true,
-        "catchment": true
+        "catchment": true,
+        "zones": true
       }
     },
     "flora": {
@@ -117,11 +122,12 @@
       "allParametersLabel": "All parameters",
       "center": [-71.02, -14.74],
       "documents": {
+        "assistant": "ASSISTANT.md",
         "changelog": "CHANGELOG.md",
         "guide": "DATASET_GUIDE.md"
       },
-      "fieldChemistry": [],
-      "contaminants": [],
+      "fieldChemistry": ["chloride", "phosphate", "sulfate", "total_n"],
+      "contaminants": ["ag", "as", "cd", "co", "cr", "cu", "hg", "mo", "ni", "pb", "sb", "se", "tl", "zn"],
       "parameters": {},
       "qualityReasons": {
         "censored_limit_unreadable": "Censored value with an unreadable reporting limit",
@@ -132,7 +138,7 @@
         "reported_species_missing": "Reported species is missing"
       },
       "features": {
-        "assistant": false,
+        "assistant": true,
         "catchment": false
       }
     },
@@ -162,11 +168,12 @@
       "allParametersLabel": "All parameters",
       "center": [-71.02, -14.74],
       "documents": {
+        "assistant": "ASSISTANT.md",
         "changelog": "CHANGELOG.md",
         "guide": "DATASET_GUIDE.md"
       },
-      "fieldChemistry": [],
-      "contaminants": [],
+      "fieldChemistry": ["acidity_exchangeable", "base_saturation", "base_sum", "ca_exchangeable", "caco3", "caco3_gravimetric", "cation_sum", "cec", "clay", "cn_free", "cr_vi", "ec", "k_available", "k_exchangeable", "mg_exchangeable", "moisture", "na_exchangeable", "organic_matter", "p_available", "ph", "sand", "silt", "textural_class"],
+      "contaminants": ["ag", "as", "cd", "co", "cr", "cu", "hg", "mo", "ni", "pb", "sb", "se", "tl", "zn"],
       "parameters": {},
       "qualityReasons": {
         "datum_not_declared": "The source does not declare a datum",
@@ -187,7 +194,7 @@
         "data_owner_qc_cell_detail": "Cell-level detail of the data owner's QC log"
       },
       "features": {
-        "assistant": false,
+        "assistant": true,
         "catchment": false
       }
     }
