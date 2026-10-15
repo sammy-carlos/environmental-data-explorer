@@ -18,7 +18,7 @@ const REQUIRED_COLUMNS = ["result_id", "sample_id", "source_record_id", "station
 
 export async function setupFilters() {
   // Flora and soils identify a row by its reported sample code, not by a station.
-  const sampleBased = ["flora", "soils"].includes(state.dataset.profile);
+  const sampleBased = Boolean(state.dataset.sampleBased);
   $("dataStationHeading").textContent = sampleBased ? "Sample" : "Station";
   $("recordTabLabel").textContent = sampleBased ? "Sample" : "Station";
   const parameters = await query("SELECT parameter_code, parameter_name FROM read_parquet('parameters.parquet')");

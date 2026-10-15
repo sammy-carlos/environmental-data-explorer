@@ -117,7 +117,7 @@ export function openRecord(row, { fly = true, sampleView = false } = {}) {
       ["Uncertainty", row.uncertainty],
     ])] : []),
     section("Sampling", [
-      [["flora", "soils"].includes(state.dataset.profile) ? "Reported sample code" : "Station", row.station_code],
+      [state.dataset.sampleBased ? "Reported sample code" : "Station", row.station_code],
       ["Sampling date", formatDate(row.sampling_date)], ["Campaign", row.campaign_name], ["Sample ID", row.sample_id],
     ]),
     section("Location", [

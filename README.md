@@ -1,10 +1,10 @@
 # Environmental Data Explorer
 
-A map viewer for the Antapacay environmental datasets. It includes the sediment
-database and Flora v1.0.0: filter by parameter, quality and period, draw areas,
-open any sample and run SQL. Sediments additionally offers its hydrological context
-and data assistant; Flora keeps its raw taxon and plant-sample evidence without
-inventing either relationship.
+A map viewer for the Antapacay environmental datasets: Sediments, Flora and Soils.
+Filter by parameter, quality and period, draw areas, open any sample and run SQL.
+Sediments additionally offers its hydrological context and data assistant; Flora
+keeps its raw taxon and plant-sample evidence without inventing either relationship,
+and Soils shows the horizon, depth and limit evidence of each sample.
 
 Everything runs in the browser. There is no backend: the page is static, DuckDB-Wasm
 reads the Parquet release straight from Hugging Face, and the assistant calls the
@@ -22,15 +22,17 @@ using your own `hf auth login` (the folder is ignored by git). When that folder 
 present and the page is opened on localhost, it is used instead of Hugging Face, so
 no token is needed while developing.
 
-To work with Flora locally:
+To work with Flora or Soils locally, sync it by its id:
 
 ```
 ./scripts/sync-data.sh flora
+./scripts/sync-data.sh soils
 ./scripts/serve.sh
 ```
 
-Open [http://127.0.0.1:8890/?dataset=flora](http://127.0.0.1:8890/?dataset=flora).
-The selector in the top bar switches between Flora and Sediments in the same viewer.
+Open [http://127.0.0.1:8890/?dataset=flora](http://127.0.0.1:8890/?dataset=flora) or
+[http://127.0.0.1:8890/?dataset=soils](http://127.0.0.1:8890/?dataset=soils).
+The selector in the top bar switches between the datasets in the same viewer.
 
 Open http://127.0.0.1:8890 and sign in with the shared account.
 

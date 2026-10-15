@@ -3,6 +3,35 @@ import { state } from "../state.js";
 import { rowsOf } from "../lib/sql.js";
 import { datasetFile, localUrl, usesLocalData } from "./source.js";
 
+// Every quality issue that describes a row, whatever record it was raised on: the
+// source row, its station, sample, analysis, result or, where the release has them,
+// the location as the source reported it. Issues closed as RESOLVED or REJECTED no
+// longer describe the record; OPEN and ACCEPTED ones do. Issues raised on a whole
+// campaign or dataset are left to its guide, since they would mark every row of it.
+const ISSUE_TARGETS = [
+  ["source_record", "sr.source_record_id"],
+  ["station", "st.station_id"],
+  ["sample", "s.sample_id"],
+  ["analysis", "a.analysis_id"],
+  ["result", "r.result_id"],
+];
+const LOCATED_ISSUE_TARGETS = [...ISSUE_TARGETS, ["location_observation", "lo.location_observation_id"]];
+
+function issueJoins(targets) {
+  return targets.map(([entity, key], index) => `
+  LEFT JOIN (
+    SELECT entity_id, string_agg(DISTINCT rule_code, ',') AS rules
+    FROM read_parquet('quality_issues.parquet')
+    WHERE entity_type = '${entity}' AND review_status NOT IN ('RESOLVED', 'REJECTED') GROUP BY entity_id
+  ) q${index} ON q${index}.entity_id = ${key}`).join("");
+}
+
+// One rule is listed once even when it was raised on several records of the row.
+function issueRules(targets) {
+  const rules = targets.map((_, index) => `q${index}.rules`).join(", ");
+  return `nullif(array_to_string(list_sort(list_distinct(string_split(concat_ws(',', ${rules}), ','))), ','), '') AS quality_rules`;
+}
+
 // One row per analytical result, joined with its sample, event, station, campaign,
 // source row and quality issues. zone is
 // the watercourse or site written on the field sheet, without accents or the detail
@@ -22,7 +51,7 @@ const SEDIMENT_OBSERVATIONS = `
          e.zone_description,
          nullif(trim(regexp_replace(regexp_replace(strip_accents(lower(e.zone_description)), '\\s*[,;(\\x{2013}-].*$', ''),
            '\\s+(en el|en la|aguas arriba|aguas abajo|a la altura|junto a|cerca de)\\s.*$', '')), '') AS zone,
-         nullif(concat_ws(',', qr.rules, qs.rules), '') AS quality_rules
+         ${issueRules(ISSUE_TARGETS)}
   FROM read_parquet('results.parquet') r
   JOIN read_parquet('parameters.parquet') p USING (parameter_code)
   JOIN read_parquet('analyses.parquet') a USING (analysis_id)
@@ -32,15 +61,26 @@ const SEDIMENT_OBSERVATIONS = `
   LEFT JOIN read_parquet('stations.parquet') st USING (station_id)
   JOIN read_parquet('source_records.parquet') sr ON r.source_record_id = sr.source_record_id
   JOIN read_parquet('source_files.parquet') sf ON sr.source_file_id = sf.source_file_id
-  LEFT JOIN (
-    SELECT entity_id, string_agg(DISTINCT rule_code, ',') AS rules
-    FROM read_parquet('quality_issues.parquet') WHERE entity_type = 'source_record' GROUP BY entity_id
-  ) qr ON qr.entity_id = sr.source_record_id
-  LEFT JOIN (
-    SELECT entity_id, string_agg(DISTINCT rule_code, ',') AS rules
-    FROM read_parquet('quality_issues.parquet') WHERE entity_type = 'station' GROUP BY entity_id
-  ) qs ON qs.entity_id = st.station_id
+  ${issueJoins(ISSUE_TARGETS)}
 `;
+
+// Flora and soils keep the location each source reported in location_observations, one
+// per source row, and the worksheet and row of that source row in source_locator
+// ("Data!54:54"), so the worksheet is read from there.
+const SAMPLE_SOURCES = `
+  FROM read_parquet('results.parquet') r
+  JOIN read_parquet('parameters.parquet') p USING (parameter_code)
+  JOIN read_parquet('analyses.parquet') a USING (analysis_id)
+  JOIN read_parquet('samples.parquet') s USING (sample_id)
+  JOIN read_parquet('sampling_events.parquet') e USING (sampling_event_id)
+  JOIN read_parquet('campaigns.parquet') cp USING (campaign_id)
+  LEFT JOIN read_parquet('stations.parquet') st ON st.station_id = e.station_id
+  JOIN read_parquet('source_records.parquet') sr ON r.source_record_id = sr.source_record_id
+  JOIN read_parquet('source_files.parquet') sf ON sr.source_file_id = sf.source_file_id
+  LEFT JOIN read_parquet('location_observations.parquet') lo ON lo.source_record_id = sr.source_record_id
+  ${issueJoins(LOCATED_ISSUE_TARGETS)}
+`;
+const SAMPLE_SHEET = "coalesce(nullif(split_part(sr.source_locator, '!', 1), ''), sf.source_locator) AS sheet_name";
 
 // Flora shares the audit trail and analytical-result tables with sediments, but its
 // sample identity is biological. This view keeps the shared map/table contract while
@@ -54,43 +94,15 @@ const FLORA_OBSERVATIONS = `
          try_cast(e.sampling_date AS DATE) AS sampling_date, e.campaign_id, cp.campaign_name,
          r.parameter_code, p.parameter_name, r.reported_value, r.numeric_value,
          r.qualifier, r.reported_limit, coalesce(r.reported_unit, r.canonical_unit) AS reported_unit,
-         r.quality_status, sf.source_name, sf.relative_path, NULL AS sheet_name, sr.source_row_number,
+         r.quality_status, sf.source_name, sf.relative_path, ${SAMPLE_SHEET}, sr.source_row_number,
          r.canonical_unit, r.reported_unit IS NULL AND r.canonical_unit IS NOT NULL AS unit_is_inferred,
          s.data_role, s.matrix_code AS sample_type, a.analysis_group AS analysis_type,
          e.date_precision, e.date_is_estimated, e.zone_description,
          CAST(NULL AS VARCHAR) AS zone,
          s.reported_species, s.plant_part, s.matrix_code, s.treatment, s.reported_treatment,
          s.material_description, a.laboratory, a.analytical_method, a.result_basis, a.washing_status,
-         nullif(concat_ws(',', qr.rules, qs.rules, qsample.rules, qa.rules, qresult.rules), '') AS quality_rules
-  FROM read_parquet('results.parquet') r
-  JOIN read_parquet('parameters.parquet') p USING (parameter_code)
-  JOIN read_parquet('analyses.parquet') a USING (analysis_id)
-  JOIN read_parquet('samples.parquet') s USING (sample_id)
-  JOIN read_parquet('sampling_events.parquet') e USING (sampling_event_id)
-  JOIN read_parquet('campaigns.parquet') cp USING (campaign_id)
-  LEFT JOIN read_parquet('stations.parquet') st ON st.station_id = e.station_id
-  JOIN read_parquet('source_records.parquet') sr ON r.source_record_id = sr.source_record_id
-  JOIN read_parquet('source_files.parquet') sf ON sr.source_file_id = sf.source_file_id
-  LEFT JOIN (
-    SELECT entity_id, string_agg(DISTINCT rule_code, ',') AS rules
-    FROM read_parquet('quality_issues.parquet') WHERE entity_type = 'source_record' GROUP BY entity_id
-  ) qr ON qr.entity_id = sr.source_record_id
-  LEFT JOIN (
-    SELECT entity_id, string_agg(DISTINCT rule_code, ',') AS rules
-    FROM read_parquet('quality_issues.parquet') WHERE entity_type = 'station' GROUP BY entity_id
-  ) qs ON qs.entity_id = st.station_id
-  LEFT JOIN (
-    SELECT entity_id, string_agg(DISTINCT rule_code, ',') AS rules
-    FROM read_parquet('quality_issues.parquet') WHERE entity_type = 'sample' GROUP BY entity_id
-  ) qsample ON qsample.entity_id = s.sample_id
-  LEFT JOIN (
-    SELECT entity_id, string_agg(DISTINCT rule_code, ',') AS rules
-    FROM read_parquet('quality_issues.parquet') WHERE entity_type = 'analysis' GROUP BY entity_id
-  ) qa ON qa.entity_id = a.analysis_id
-  LEFT JOIN (
-    SELECT entity_id, string_agg(DISTINCT rule_code, ',') AS rules
-    FROM read_parquet('quality_issues.parquet') WHERE entity_type = 'result' GROUP BY entity_id
-  ) qresult ON qresult.entity_id = r.result_id
+         ${issueRules(LOCATED_ISSUE_TARGETS)}
+  ${SAMPLE_SOURCES}
 `;
 
 // Soils share the audit trail with the other datasets, but a station can hold a pit
@@ -105,7 +117,7 @@ const SOIL_OBSERVATIONS = `
          e.sampling_date, e.campaign_id, cp.campaign_name,
          r.parameter_code, p.parameter_name, r.reported_value, r.numeric_value,
          r.qualifier, r.reported_limit, coalesce(r.reported_unit, r.canonical_unit) AS reported_unit,
-         r.quality_status, sf.source_name, sf.relative_path, sf.source_locator AS sheet_name, sr.source_row_number,
+         r.quality_status, sf.source_name, sf.relative_path, ${SAMPLE_SHEET}, sr.source_row_number,
          r.canonical_unit, r.reported_unit IS NULL AND r.canonical_unit IS NOT NULL AS unit_is_inferred,
          s.data_role, s.matrix_code AS sample_type, a.analysis_group AS analysis_type,
          e.date_precision, e.date_is_estimated, e.zone_description,
@@ -115,28 +127,8 @@ const SOIL_OBSERVATIONS = `
          cp.entity_label, cp.study_design,
          a.laboratory, a.analytical_method, a.digestion_type, a.result_basis,
          r.text_value, r.limit_type, r.detection_limit, r.quantification_limit, r.uncertainty,
-         nullif(concat_ws(',', qs.rules, qsample.rules, qresult.rules), '') AS quality_rules
-  FROM read_parquet('results.parquet') r
-  JOIN read_parquet('parameters.parquet') p USING (parameter_code)
-  JOIN read_parquet('analyses.parquet') a USING (analysis_id)
-  JOIN read_parquet('samples.parquet') s USING (sample_id)
-  JOIN read_parquet('sampling_events.parquet') e USING (sampling_event_id)
-  JOIN read_parquet('campaigns.parquet') cp USING (campaign_id)
-  LEFT JOIN read_parquet('stations.parquet') st ON st.station_id = e.station_id
-  JOIN read_parquet('source_records.parquet') sr ON r.source_record_id = sr.source_record_id
-  JOIN read_parquet('source_files.parquet') sf ON sr.source_file_id = sf.source_file_id
-  LEFT JOIN (
-    SELECT entity_id, string_agg(DISTINCT rule_code, ',') AS rules
-    FROM read_parquet('quality_issues.parquet') WHERE entity_type = 'station' AND review_status = 'OPEN' GROUP BY entity_id
-  ) qs ON qs.entity_id = st.station_id
-  LEFT JOIN (
-    SELECT entity_id, string_agg(DISTINCT rule_code, ',') AS rules
-    FROM read_parquet('quality_issues.parquet') WHERE entity_type = 'sample' AND review_status = 'OPEN' GROUP BY entity_id
-  ) qsample ON qsample.entity_id = s.sample_id
-  LEFT JOIN (
-    SELECT entity_id, string_agg(DISTINCT rule_code, ',') AS rules
-    FROM read_parquet('quality_issues.parquet') WHERE entity_type = 'result' AND review_status = 'OPEN' GROUP BY entity_id
-  ) qresult ON qresult.entity_id = r.result_id
+         ${issueRules(LOCATED_ISSUE_TARGETS)}
+  ${SAMPLE_SOURCES}
 `;
 
 const OBSERVATIONS = { flora: FLORA_OBSERVATIONS, soils: SOIL_OBSERVATIONS };
